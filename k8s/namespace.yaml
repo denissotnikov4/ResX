@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resx
+  labels:
+    app.kubernetes.io/name: resx
+    app.kubernetes.io/part-of: resx-platform

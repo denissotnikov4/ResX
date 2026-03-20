@@ -1,0 +1,78 @@
+version: "3.9"
+
+# ============================================================
+# docker-compose.override.yml — Development overrides
+# Adds hot-reload, exposes additional ports, uses dev settings
+# ============================================================
+
+services:
+
+  # Infrastructure: verbose logging
+  postgres:
+    environment:
+      POSTGRES_LOG_STATEMENT: "all"
+
+  rabbitmq:
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit log_levels [{connection,info}]"
+
+  # Services: Development environment + verbose logging
+  identity-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+    volumes:
+      - ./src:/src
+
+  users-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  listings-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  transactions-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  messaging-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  notifications-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  charity-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  disputes-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  files-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  analytics-service:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+
+  api-gateway:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+      Logging__LogLevel__Yarp: Information
+    ports:
+      - "8080:8080"

@@ -1,0 +1,433 @@
+version: "3.9"
+
+# ============================================================
+# ResX — P2P Resource Crossing Platform
+# docker-compose.yml — production-like local orchestration
+# ============================================================
+
+networks:
+  resx-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  redis-data:
+  minio-data:
+
+# ─────────────────────────────────────────
+# INFRASTRUCTURE
+# ─────────────────────────────────────────
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: resx-postgres
+    networks: [resx-network]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: resx-rabbitmq
+    networks: [resx-network]
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: resx
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: resx-redis
+    networks: [resx-network]
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: resx-minio
+    networks: [resx-network]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+# ─────────────────────────────────────────
+# MICROSERVICES
+# ─────────────────────────────────────────
+
+  identity-service:
+    build:
+      context: ./src
+      dockerfile: Services/Identity/ResX.Identity.API/Dockerfile
+    container_name: resx-identity
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__IdentityDb: "Host=postgres;Port=5432;Database=resx_identity;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      Jwt__AccessTokenExpiryMinutes: "60"
+      Jwt__RefreshTokenExpiryDays: "30"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  users-service:
+    build:
+      context: ./src
+      dockerfile: Services/Users/ResX.Users.API/Dockerfile
+    container_name: resx-users
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__UsersDb: "Host=postgres;Port=5432;Database=resx_users;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+      Redis__ConnectionString: "redis:6379,password=redis_password"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "5002:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  listings-service:
+    build:
+      context: ./src
+      dockerfile: Services/Listings/ResX.Listings.API/Dockerfile
+    container_name: resx-listings
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__ListingsDb: "Host=postgres;Port=5432;Database=resx_listings;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+      Redis__ConnectionString: "redis:6379,password=redis_password"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "5003:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  transactions-service:
+    build:
+      context: ./src
+      dockerfile: Services/Transactions/ResX.Transactions.API/Dockerfile
+    container_name: resx-transactions
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__TransactionsDb: "Host=postgres;Port=5432;Database=resx_transactions;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5004:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  messaging-service:
+    build:
+      context: ./src
+      dockerfile: Services/Messaging/ResX.Messaging.API/Dockerfile
+    container_name: resx-messaging
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__MessagingDb: "Host=postgres;Port=5432;Database=resx_messaging;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+      Redis__ConnectionString: "redis:6379,password=redis_password"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "5005:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  notifications-service:
+    build:
+      context: ./src
+      dockerfile: Services/Notifications/ResX.Notifications.API/Dockerfile
+    container_name: resx-notifications
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__NotificationsDb: "Host=postgres;Port=5432;Database=resx_notifications;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5006:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  charity-service:
+    build:
+      context: ./src
+      dockerfile: Services/Charity/ResX.Charity.API/Dockerfile
+    container_name: resx-charity
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__CharityDb: "Host=postgres;Port=5432;Database=resx_charity;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5007:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  disputes-service:
+    build:
+      context: ./src
+      dockerfile: Services/Disputes/ResX.Disputes.API/Dockerfile
+    container_name: resx-disputes
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DisputesDb: "Host=postgres;Port=5432;Database=resx_disputes;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      EventBus__HostName: rabbitmq
+      EventBus__VirtualHost: resx
+      EventBus__UserName: guest
+      EventBus__Password: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5008:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  files-service:
+    build:
+      context: ./src
+      dockerfile: Services/Files/ResX.Files.API/Dockerfile
+    container_name: resx-files
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__FilesDb: "Host=postgres;Port=5432;Database=resx_files;Username=postgres;Password=postgres"
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      S3__ServiceUrl: "http://minio:9000"
+      S3__AccessKey: minioadmin
+      S3__SecretKey: minioadmin123
+      S3__BucketName: resx-files
+      S3__Region: us-east-1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "5009:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  analytics-service:
+    build:
+      context: ./src
+      dockerfile: Services/Analytics/ResX.Analytics.API/Dockerfile
+    container_name: resx-analytics
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__UsersDb: "Host=postgres;Port=5432;Database=resx_users;Username=postgres;Password=postgres"
+      ConnectionStrings__ListingsDb: "Host=postgres;Port=5432;Database=resx_listings;Username=postgres;Password=postgres"
+      ConnectionStrings__TransactionsDb: "Host=postgres;Port=5432;Database=resx_transactions;Username=postgres;Password=postgres"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5010:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── API GATEWAY ────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./src
+      dockerfile: Gateway/ResX.ApiGateway/Dockerfile
+    container_name: resx-gateway
+    networks: [resx-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
+      Jwt__Issuer: "ResX.Identity"
+      Jwt__Audience: "ResX"
+      ReverseProxy__Clusters__identity-cluster__Destinations__primary__Address: "http://identity-service:8080"
+      ReverseProxy__Clusters__users-cluster__Destinations__primary__Address: "http://users-service:8080"
+      ReverseProxy__Clusters__listings-cluster__Destinations__primary__Address: "http://listings-service:8080"
+      ReverseProxy__Clusters__transactions-cluster__Destinations__primary__Address: "http://transactions-service:8080"
+      ReverseProxy__Clusters__messaging-cluster__Destinations__primary__Address: "http://messaging-service:8080"
+      ReverseProxy__Clusters__notifications-cluster__Destinations__primary__Address: "http://notifications-service:8080"
+      ReverseProxy__Clusters__charity-cluster__Destinations__primary__Address: "http://charity-service:8080"
+      ReverseProxy__Clusters__disputes-cluster__Destinations__primary__Address: "http://disputes-service:8080"
+      ReverseProxy__Clusters__analytics-cluster__Destinations__primary__Address: "http://analytics-service:8080"
+      ReverseProxy__Clusters__files-cluster__Destinations__primary__Address: "http://files-service:8080"
+    depends_on:
+      - identity-service
+      - users-service
+      - listings-service
+      - transactions-service
+      - messaging-service
+      - notifications-service
+      - charity-service
+      - disputes-service
+      - files-service
+      - analytics-service
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

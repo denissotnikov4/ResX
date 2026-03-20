@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option csharp_namespace = "ResX.Files.API.Grpc";
+
+package files;
+
+service FilesService {
+  rpc GetFileUrl(GetFileUrlRequest) returns (GetFileUrlResponse);
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+}
+
+message GetFileUrlRequest {
+  string file_id = 1;
+}
+
+message GetFileUrlResponse {
+  string url = 1;
+  string storage_key = 2;
+}
+
+message DeleteFileRequest {
+  string file_id = 1;
+}
+
+message DeleteFileResponse {
+  bool success = 1;
+}

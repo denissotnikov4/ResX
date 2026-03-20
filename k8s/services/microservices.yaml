@@ -1,0 +1,793 @@
+# ============================================================
+# ResX Platform — All microservice Deployments + Services + HPAs
+# (except identity-service which has its own file)
+# ============================================================
+
+# ─── USERS SERVICE ──────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-service
+  namespace: resx
+  labels:
+    app: users-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: users-service
+  template:
+    metadata:
+      labels:
+        app: users-service
+    spec:
+      containers:
+        - name: users-service
+          image: resx/users-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__UsersDb
+              value: "Host=postgres;Port=5432;Database=resx_users;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+            - name: Redis__ConnectionString
+              value: "redis:6379,password=$(REDIS_PASSWORD)"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: redis-password
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-service
+  namespace: resx
+spec:
+  selector:
+    app: users-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: users-service-hpa
+  namespace: resx
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: users-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+# ─── LISTINGS SERVICE ───────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: listings-service
+  namespace: resx
+  labels:
+    app: listings-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: listings-service
+  template:
+    metadata:
+      labels:
+        app: listings-service
+    spec:
+      containers:
+        - name: listings-service
+          image: resx/listings-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__ListingsDb
+              value: "Host=postgres;Port=5432;Database=resx_listings;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+            - name: Redis__ConnectionString
+              value: "redis:6379,password=$(REDIS_PASSWORD)"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: redis-password
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: listings-service
+  namespace: resx
+spec:
+  selector:
+    app: listings-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: listings-service-hpa
+  namespace: resx
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: listings-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+# ─── TRANSACTIONS SERVICE ───────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transactions-service
+  namespace: resx
+  labels:
+    app: transactions-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: transactions-service
+  template:
+    metadata:
+      labels:
+        app: transactions-service
+    spec:
+      containers:
+        - name: transactions-service
+          image: resx/transactions-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__TransactionsDb
+              value: "Host=postgres;Port=5432;Database=resx_transactions;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transactions-service
+  namespace: resx
+spec:
+  selector:
+    app: transactions-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: transactions-service-hpa
+  namespace: resx
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: transactions-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+# ─── MESSAGING SERVICE ──────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messaging-service
+  namespace: resx
+  labels:
+    app: messaging-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: messaging-service
+  template:
+    metadata:
+      labels:
+        app: messaging-service
+    spec:
+      containers:
+        - name: messaging-service
+          image: resx/messaging-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__MessagingDb
+              value: "Host=postgres;Port=5432;Database=resx_messaging;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+            - name: Redis__ConnectionString
+              value: "redis:6379,password=$(REDIS_PASSWORD)"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: redis-password
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: messaging-service
+  namespace: resx
+spec:
+  selector:
+    app: messaging-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+# ─── NOTIFICATIONS SERVICE ──────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-service
+  namespace: resx
+  labels:
+    app: notifications-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications-service
+  template:
+    metadata:
+      labels:
+        app: notifications-service
+    spec:
+      containers:
+        - name: notifications-service
+          image: resx/notifications-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__NotificationsDb
+              value: "Host=postgres;Port=5432;Database=resx_notifications;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-service
+  namespace: resx
+spec:
+  selector:
+    app: notifications-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+# ─── CHARITY SERVICE ────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: charity-service
+  namespace: resx
+  labels:
+    app: charity-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: charity-service
+  template:
+    metadata:
+      labels:
+        app: charity-service
+    spec:
+      containers:
+        - name: charity-service
+          image: resx/charity-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__CharityDb
+              value: "Host=postgres;Port=5432;Database=resx_charity;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: charity-service
+  namespace: resx
+spec:
+  selector:
+    app: charity-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+# ─── DISPUTES SERVICE ───────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disputes-service
+  namespace: resx
+  labels:
+    app: disputes-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: disputes-service
+  template:
+    metadata:
+      labels:
+        app: disputes-service
+    spec:
+      containers:
+        - name: disputes-service
+          image: resx/disputes-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__DisputesDb
+              value: "Host=postgres;Port=5432;Database=resx_disputes;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: EventBus__HostName
+              value: rabbitmq
+            - name: EventBus__VirtualHost
+              value: resx
+            - name: EventBus__UserName
+              value: guest
+            - name: EventBus__Password
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: rabbitmq-password
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: disputes-service
+  namespace: resx
+spec:
+  selector:
+    app: disputes-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+# ─── FILES SERVICE ──────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: files-service
+  namespace: resx
+  labels:
+    app: files-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: files-service
+  template:
+    metadata:
+      labels:
+        app: files-service
+    spec:
+      containers:
+        - name: files-service
+          image: resx/files-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__FilesDb
+              value: "Host=postgres;Port=5432;Database=resx_files;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: jwt-secret-key
+            - name: Jwt__Issuer
+              value: ResX.Identity
+            - name: Jwt__Audience
+              value: ResX
+            - name: S3__ServiceUrl
+              value: "https://storage.yandexcloud.net"
+            - name: S3__Region
+              value: ru-central1
+            - name: S3__BucketName
+              value: resx-files
+            - name: S3__AccessKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: s3-access-key
+            - name: S3__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: s3-secret-key
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: files-service
+  namespace: resx
+spec:
+  selector:
+    app: files-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+# ─── ANALYTICS SERVICE ──────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: resx
+  labels:
+    app: analytics-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: resx/analytics-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__UsersDb
+              value: "Host=postgres;Port=5432;Database=resx_users;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: ConnectionStrings__ListingsDb
+              value: "Host=postgres;Port=5432;Database=resx_listings;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: ConnectionStrings__TransactionsDb
+              value: "Host=postgres;Port=5432;Database=resx_transactions;Username=postgres;Password=$(POSTGRES_PASSWORD)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resx-secrets
+                  key: postgres-password
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: resx
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - port: 8080
+      targetPort: 8080

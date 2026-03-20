@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option csharp_namespace = "ResX.Listings.API.Grpc";
+
+package listings;
+
+service ListingsService {
+  rpc GetListingById(GetListingByIdRequest) returns (GetListingByIdResponse);
+  rpc ReserveListingForTransaction(ReserveListingRequest) returns (ReserveListingResponse);
+  rpc CompleteListingTransaction(CompleteListingRequest) returns (CompleteListingResponse);
+}
+
+message GetListingByIdRequest {
+  string listing_id = 1;
+}
+
+message GetListingByIdResponse {
+  string listing_id = 1;
+  string title = 2;
+  string donor_id = 3;
+  string status = 4;
+  string transfer_type = 5;
+  string category_name = 6;
+}
+
+message ReserveListingRequest {
+  string listing_id = 1;
+  string recipient_id = 2;
+}
+
+message ReserveListingResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message CompleteListingRequest {
+  string listing_id = 1;
+}
+
+message CompleteListingResponse {
+  bool success = 1;
+}

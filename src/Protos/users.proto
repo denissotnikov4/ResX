@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+option csharp_namespace = "ResX.Users.API.Grpc";
+
+package users;
+
+service UsersService {
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc UpdateEcoStats(UpdateEcoStatsRequest) returns (UpdateEcoStatsResponse);
+}
+
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+message GetUserProfileResponse {
+  string user_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string avatar_url = 4;
+  string city = 5;
+  double rating = 6;
+  int32 review_count = 7;
+  EcoStatsProto eco_stats = 8;
+}
+
+message EcoStatsProto {
+  int32 items_gifted = 1;
+  int32 items_received = 2;
+  double co2_saved_kg = 3;
+  double waste_saved_kg = 4;
+}
+
+message UpdateEcoStatsRequest {
+  string user_id = 1;
+  int32 items_gifted_delta = 2;
+  int32 items_received_delta = 3;
+  double co2_delta = 4;
+  double waste_delta = 5;
+}
+
+message UpdateEcoStatsResponse {
+  bool success = 1;
+}
