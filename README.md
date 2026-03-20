@@ -1,46 +1,49 @@
 # ResX — Resource Crossing Platform
 
-> A P2P platform for reducing municipal solid waste by enabling gifting, exchange, and charitable donation of still-usable items between citizens and NGOs.
+> P2P-платформа для сокращения твёрдых бытовых отходов: горожане и НКО могут бесплатно отдавать, обменивать и жертвовать вещи, которые ещё можно использовать.
 
 ---
 
-## Table of Contents
+## Содержание
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Services](#services)
+- [Обзор](#обзор)
+- [Архитектура](#архитектура)
+- [Сервисы](#сервисы)
 - [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Quick Start (Docker Compose)](#quick-start-docker-compose)
-- [Kubernetes Deployment](#kubernetes-deployment)
-- [Environment Variables](#environment-variables)
+- [Требования](#требования)
+- [Быстрый старт (Docker Compose)](#быстрый-старт-docker-compose)
+- [Развёртывание в Kubernetes](#развёртывание-в-kubernetes)
+- [Переменные окружения](#переменные-окружения)
 - [API Endpoints](#api-endpoints)
-- [Development Workflow](#development-workflow)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
+- [Доменные модели](#доменные-модели)
+- [Стратегия кэширования](#стратегия-кэширования)
+- [Интеграционные тесты](#интеграционные-тесты)
+- [Рабочий процесс разработки](#рабочий-процесс-разработки)
+- [Структура проекта](#структура-проекта)
+- [Участие в разработке](#участие-в-разработке)
 
 ---
 
-## Overview
+## Обзор
 
-**ResX** (ресурс-кроссинг) is a backend platform that connects people who have items they no longer need with those who can use them — reducing landfill waste and fostering circular economy within cities.
+**ResX** (ресурс-кроссинг) — backend-платформа, которая соединяет людей, у которых есть ненужные вещи, с теми, кто в них нуждается. Цель — сокращение свалочных отходов и формирование циклической экономики в городах.
 
-**Key capabilities:**
-- Post listings for free gifting, barter exchange, or charitable donation
-- Real-time messaging between users (SignalR WebSocket)
-- NGO charity campaigns with item donation workflows
-- Dispute resolution for failed transactions
-- File uploads (photos) stored in S3-compatible object storage
-- Analytics on eco-impact, category trends, and city activity
-- Full JWT-based authentication and authorization
+**Ключевые возможности:**
+- Публикация объявлений: бесплатная отдача, обмен или благотворительное пожертвование
+- Обмен сообщениями в реальном времени (SignalR WebSocket)
+- Благотворительные кампании НКО с процессом пожертвования вещей
+- Разрешение споров по несостоявшимся транзакциям
+- Загрузка файлов (фото) в S3-совместимое объектное хранилище
+- Аналитика: эко-влияние, тренды по категориям, активность по городам
+- Полноценная JWT-аутентификация с ротацией refresh-токенов и Redis-блэклистом
 
 ---
 
-## Architecture
+## Архитектура
 
 ```
                            +-------------------------------------+
-                           |            Client Apps              |
+                           |          Клиентские приложения      |
                            |   (Web, Mobile, Third-party APIs)   |
                            +----------------+--------------------+
                                             | HTTPS
@@ -65,109 +68,110 @@
              |  tions   |  | Service  |  | Service  | | Service  |
              +----------+  +----------+  +----------+ +----------+
 
-                    +-------------- Infrastructure ----------------+
+                    +-------------- Инфраструктура ----------------+
                     |  PostgreSQL . RabbitMQ . Redis . MinIO/S3   |
-                    +---------------------------------------------+
+                    +----------------------------------------------+
 ```
 
-**Communication patterns:**
-- **HTTP/REST** — client <-> API Gateway <-> services
-- **gRPC** — synchronous inter-service calls (Identity->Users, Listings->Files, etc.)
-- **RabbitMQ** — async integration events (UserRegistered, ListingPublished, OrderCreated, etc.)
-- **SignalR** — real-time WebSocket for messaging
+**Паттерны коммуникации:**
+- **HTTP/REST** — клиент ↔ API Gateway ↔ сервисы
+- **gRPC** — синхронные межсервисные вызовы (Identity→Users, Listings→Files и т.д.)
+- **RabbitMQ** — асинхронные интеграционные события (UserRegistered, ListingCreated, TransactionCompleted, MessageSent и др.)
+- **SignalR** — real-time WebSocket для обмена сообщениями
 
-**Architecture per service:** Clean Architecture + DDD
+**Архитектура каждого сервиса:** Clean Architecture + DDD
 ```
-ResX.<Service>.Domain          <- Aggregates, Value Objects, Domain Events, Repository interfaces
-ResX.<Service>.Application     <- Commands, Queries (CQRS/MediatR), DTOs, Service interfaces
-ResX.<Service>.Infrastructure  <- EF Core DbContext, Repository implementations, FluentMigrator, gRPC clients
-ResX.<Service>.API             <- ASP.NET Core Controllers, Middleware, Program.cs
+ResX.<Service>.Domain          ← Aggregates, Value Objects, Domain Events
+ResX.<Service>.Application     ← Commands, Queries (CQRS/MediatR), DTOs, интерфейсы репозиториев
+ResX.<Service>.Infrastructure  ← EF Core DbContext, реализации репозиториев, FluentMigrator
+ResX.<Service>.API             ← ASP.NET Core Controllers, Program.cs
 ```
 
 ---
 
-## Services
+## Сервисы
 
-| Service              | Internal Port | Dev Port | Description                                      |
-|----------------------|:-------------:|:--------:|--------------------------------------------------|
-| **API Gateway**      | 8080          | 8080     | YARP reverse proxy, JWT auth, rate limiting      |
-| **Identity Service** | 8080          | 5001     | Registration, login, JWT issuance, refresh tokens|
-| **Users Service**    | 8080          | 5002     | User profiles, reputation, ratings               |
-| **Listings Service** | 8080          | 5003     | Item listings, search, categories, moderation    |
-| **Transactions Svc** | 8080          | 5004     | Requests, confirmations, exchange workflows      |
-| **Messaging Service**| 8080          | 5005     | Real-time chat via SignalR, message history      |
-| **Notifications Svc**| 8080          | 5006     | Push/email notifications via event consumption   |
-| **Charity Service**  | 8080          | 5007     | NGO campaigns, donation management               |
-| **Disputes Service** | 8080          | 5008     | Dispute filing, evidence, moderator resolution   |
-| **Files Service**    | 8080          | 5009     | S3 file upload/download, image processing        |
-| **Analytics Service**| 8080          | 5010     | Eco stats, category trends, city activity        |
+| Сервис               | Внутренний порт | Dev-порт | Описание                                          |
+|----------------------|:---------------:|:--------:|---------------------------------------------------|
+| **API Gateway**      | 8080            | 8080     | YARP reverse proxy, JWT-аутентификация, rate limit|
+| **Identity Service** | 8080            | 5001     | Регистрация, вход, выдача JWT, refresh-токены     |
+| **Users Service**    | 8080            | 5002     | Профили, репутация, отзывы, эко-статистика        |
+| **Listings Service** | 8080            | 5003     | Объявления, поиск, категории, status machine      |
+| **Transactions Svc** | 8080            | 5004     | Жизненный цикл транзакций, подтверждения, споры   |
+| **Messaging Service**| 8080            | 5005     | Real-time чат через SignalR, история сообщений    |
+| **Notifications Svc**| 8080            | 5006     | Внутренние уведомления через consumption событий  |
+| **Charity Service**  | 8080            | 5007     | НКО-организации, благотворительные заявки         |
+| **Disputes Service** | 8080            | 5008     | Споры, доказательства, решение модератора         |
+| **Files Service**    | 8080            | 5009     | Загрузка/скачивание файлов через S3, pre-signed URLs|
+| **Analytics Service**| 8080            | 5010     | Эко-статистика, тренды по категориям, активность по городам|
 
-**Infrastructure:**
+**Инфраструктура:**
 
-| Component    | Dev Port | Purpose                              |
-|--------------|:--------:|--------------------------------------|
-| PostgreSQL   | 5432     | Primary data store (9 databases)     |
-| RabbitMQ     | 5672     | Message broker                       |
-| RabbitMQ UI  | 15672    | Management console                   |
-| Redis        | 6379     | Distributed cache & sessions         |
-| MinIO        | 9000     | S3-compatible object storage (local) |
-| MinIO UI     | 9001     | MinIO web console                    |
+| Компонент    | Dev-порт | Назначение                                  |
+|--------------|:--------:|---------------------------------------------|
+| PostgreSQL   | 5432     | Основное хранилище данных (отдельная БД на сервис)|
+| RabbitMQ     | 5672     | Message broker                              |
+| RabbitMQ UI  | 15672    | Management console                          |
+| Redis        | 6379     | Распределённый кэш и блэклист токенов       |
+| MinIO        | 9000     | S3-совместимое объектное хранилище (локально)|
+| MinIO UI     | 9001     | Web-консоль MinIO                           |
 
 ---
 
 ## Tech Stack
 
-| Layer             | Technology                                          |
+| Слой              | Технология                                          |
 |-------------------|-----------------------------------------------------|
-| Language          | C# 13 / .NET 10                                     |
+| Язык              | C# 13 / .NET 10                                     |
 | Web Framework     | ASP.NET Core 10                                     |
 | API Gateway       | YARP (Yet Another Reverse Proxy) 2.3                |
 | ORM               | Entity Framework Core 10 (Npgsql provider)          |
-| Migrations        | FluentMigrator                                      |
+| Миграции          | FluentMigrator                                      |
 | CQRS/Mediator     | MediatR 12                                          |
-| Validation        | FluentValidation                                    |
-| Serialization     | System.Text.Json (camelCase)                        |
-| Messaging         | RabbitMQ + custom EventBus building block           |
+| Валидация         | FluentValidation                                    |
+| Сериализация      | System.Text.Json (camelCase)                        |
+| Обмен сообщениями | RabbitMQ + кастомный EventBus building block        |
 | Real-time         | SignalR (WebSocket, Long Polling fallback)           |
 | RPC               | gRPC (Google.Protobuf, Grpc.AspNetCore)             |
-| Caching           | Redis (StackExchange.Redis)                         |
-| Object Storage    | S3 (AWSSDK.S3 — Yandex Object Storage / MinIO)     |
-| Authentication    | JWT Bearer (Microsoft.AspNetCore.Authentication)    |
-| API Docs          | Swagger / OpenAPI (Swashbuckle)                     |
+| Кэширование       | Redis (StackExchange.Redis)                         |
+| Объектное хранилище| S3 (AWSSDK.S3 — Yandex Object Storage / MinIO)    |
+| Аутентификация    | JWT Bearer (Microsoft.AspNetCore.Authentication)    |
+| API-документация  | Swagger / OpenAPI (Swashbuckle)                     |
 | Health Checks     | ASP.NET Core HealthChecks + Npgsql                  |
-| Containerization  | Docker (multi-stage builds)                         |
-| Orchestration     | Kubernetes (Deployments, StatefulSets, HPA, Ingress)|
-| Database          | PostgreSQL 16                                       |
+| Контейнеризация   | Docker (multi-stage builds)                         |
+| Оркестрация       | Kubernetes (Deployments, StatefulSets, HPA, Ingress)|
+| База данных       | PostgreSQL 16                                       |
+| Тестирование      | xUnit, FluentAssertions, Testcontainers, NSubstitute|
 
 ---
 
-## Prerequisites
+## Требования
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (with Docker Compose v2)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) (for Kubernetes deployment)
-- Optionally: [k9s](https://k9scli.io/), [Lens](https://k8slens.dev/) for cluster monitoring
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (с Docker Compose v2)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) (для развёртывания в Kubernetes)
+- Опционально: [k9s](https://k9scli.io/), [Lens](https://k8slens.dev/) для мониторинга кластера
 
 ---
 
-## Quick Start (Docker Compose)
+## Быстрый старт (Docker Compose)
 
-### 1. Clone the repository
+### 1. Клонирование репозитория
 
 ```bash
 git clone https://github.com/your-org/resx.git
 cd resx
 ```
 
-### 2. Configure environment
+### 2. Настройка окружения
 
-Copy and edit the environment file:
+Скопируйте и отредактируйте файл переменных окружения:
 
 ```bash
 cp .env.example .env
 ```
 
-Minimum required values in `.env`:
+Минимально необходимые значения в `.env`:
 
 ```env
 POSTGRES_PASSWORD=your_postgres_password
@@ -178,88 +182,88 @@ S3_ACCESS_KEY=minioadmin
 S3_SECRET_KEY=minioadmin
 ```
 
-### 3. Start all services
+### 3. Запуск всех сервисов
 
 ```bash
 docker compose up --build
 ```
 
-Or run only infrastructure first, then services:
+Или сначала только инфраструктура, затем сервисы:
 
 ```bash
 docker compose up postgres rabbitmq redis minio
 docker compose up --build identity-service users-service listings-service api-gateway
 ```
 
-### 4. Verify
+### 4. Проверка
 
-| URL                                    | Description                    |
-|----------------------------------------|--------------------------------|
-| http://localhost:8080/health           | API Gateway health check       |
-| http://localhost:5001/swagger          | Identity Service Swagger UI    |
-| http://localhost:5002/swagger          | Users Service Swagger UI       |
-| http://localhost:5003/swagger          | Listings Service Swagger UI    |
-| http://localhost:5004/swagger          | Transactions Service Swagger   |
-| http://localhost:5005/swagger          | Messaging Service Swagger      |
-| http://localhost:5006/swagger          | Notifications Service Swagger  |
-| http://localhost:5007/swagger          | Charity Service Swagger        |
-| http://localhost:5008/swagger          | Disputes Service Swagger       |
-| http://localhost:5009/swagger          | Files Service Swagger          |
-| http://localhost:5010/swagger          | Analytics Service Swagger      |
-| http://localhost:15672                 | RabbitMQ Management UI         |
-| http://localhost:9001                  | MinIO Console                  |
+| URL                                    | Описание                        |
+|----------------------------------------|---------------------------------|
+| http://localhost:8080/health           | Health check API Gateway        |
+| http://localhost:5001/swagger          | Swagger UI — Identity Service   |
+| http://localhost:5002/swagger          | Swagger UI — Users Service      |
+| http://localhost:5003/swagger          | Swagger UI — Listings Service   |
+| http://localhost:5004/swagger          | Swagger UI — Transactions Service|
+| http://localhost:5005/swagger          | Swagger UI — Messaging Service  |
+| http://localhost:5006/swagger          | Swagger UI — Notifications Service|
+| http://localhost:5007/swagger          | Swagger UI — Charity Service    |
+| http://localhost:5008/swagger          | Swagger UI — Disputes Service   |
+| http://localhost:5009/swagger          | Swagger UI — Files Service      |
+| http://localhost:5010/swagger          | Swagger UI — Analytics Service  |
+| http://localhost:15672                 | RabbitMQ Management UI          |
+| http://localhost:9001                  | MinIO Console                   |
 
-### 5. Stop
+### 5. Остановка
 
 ```bash
 docker compose down
-# To also remove volumes (deletes all data):
+# Удалить также volumes (все данные будут удалены):
 docker compose down -v
 ```
 
 ---
 
-## Kubernetes Deployment
+## Развёртывание в Kubernetes
 
-### Prerequisites
+### Требования
 
-- A running Kubernetes cluster (1.28+)
-- `kubectl` configured to point at the cluster
-- NGINX Ingress Controller installed
-- cert-manager installed (for TLS)
+- Работающий кластер Kubernetes (1.28+)
+- `kubectl`, настроенный на этот кластер
+- Установленный NGINX Ingress Controller
+- Установленный cert-manager (для TLS)
 
-### 1. Create namespace
+### 1. Создание namespace
 
 ```bash
 kubectl apply -f k8s/namespace.yaml
 ```
 
-### 2. Create secrets
+### 2. Создание секретов
 
-Copy the template and fill in real values:
+Скопируйте шаблон и заполните реальными значениями:
 
 ```bash
 cp k8s/secrets.yaml.template k8s/secrets.yaml
-# Edit k8s/secrets.yaml — replace all <base64-encoded-*> placeholders
-# Generate base64 values: echo -n 'value' | base64
+# Отредактируйте k8s/secrets.yaml — замените все плейсхолдеры <base64-encoded-*>
+# Генерация base64: echo -n 'value' | base64
 kubectl apply -f k8s/secrets.yaml
 ```
 
-> **Never commit `k8s/secrets.yaml` to version control.** The file is gitignored.
+> **Никогда не коммитьте `k8s/secrets.yaml` в систему контроля версий.** Файл добавлен в `.gitignore`.
 
-### 3. Apply ConfigMap
+### 3. Применение ConfigMap
 
 ```bash
 kubectl apply -f k8s/configmap.yaml
 ```
 
-### 4. Deploy infrastructure
+### 4. Развёртывание инфраструктуры
 
 ```bash
 kubectl apply -f k8s/infrastructure/
 ```
 
-Wait for infrastructure to be ready:
+Ожидание готовности инфраструктуры:
 
 ```bash
 kubectl -n resx rollout status statefulset/postgres
@@ -267,32 +271,32 @@ kubectl -n resx rollout status statefulset/rabbitmq
 kubectl -n resx rollout status deployment/redis
 ```
 
-### 5. Deploy services
+### 5. Развёртывание сервисов
 
 ```bash
 kubectl apply -f k8s/services/
 kubectl apply -f k8s/ingress.yaml
 ```
 
-### 6. Check rollout
+### 6. Проверка rollout
 
 ```bash
 kubectl -n resx get pods
 kubectl -n resx get ingress
 ```
 
-### 7. DNS configuration
+### 7. Настройка DNS
 
-Point `api.resx.ru` to your cluster's Ingress external IP:
+Направьте `api.resx.ru` на внешний IP Ingress-контроллера кластера:
 
 ```bash
 kubectl -n resx get ingress resx-ingress
-# Copy the ADDRESS and create an A record in your DNS provider
+# Скопируйте ADDRESS и создайте A-запись у вашего DNS-провайдера
 ```
 
-### Scaling
+### Масштабирование
 
-HPAs are configured for all services. Manual override:
+HPA настроены для всех сервисов. Ручное управление:
 
 ```bash
 kubectl -n resx scale deployment identity-service --replicas=3
@@ -300,215 +304,360 @@ kubectl -n resx scale deployment identity-service --replicas=3
 
 ---
 
-## Environment Variables
+## Переменные окружения
 
-### Shared (all services)
+### Общие (все сервисы)
 
-| Variable                               | Description                          | Default (dev)              |
-|----------------------------------------|--------------------------------------|----------------------------|
-| `ASPNETCORE_ENVIRONMENT`               | Runtime environment                  | `Development`              |
-| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string         | `Host=postgres;Database=...`|
-| `Jwt__SecretKey`                       | JWT signing key (min 32 chars)       | —                          |
-| `Jwt__Issuer`                          | JWT issuer                           | `ResX`                     |
-| `Jwt__Audience`                        | JWT audience                         | `ResX`                     |
-| `Jwt__ExpiryMinutes`                   | Access token lifetime (minutes)      | `60`                       |
-| `RabbitMQ__HostName`                   | RabbitMQ broker host                 | `rabbitmq`                 |
-| `RabbitMQ__UserName`                   | RabbitMQ username                    | `guest`                    |
-| `RabbitMQ__Password`                   | RabbitMQ password                    | —                          |
-| `Redis__ConnectionString`              | Redis connection string              | `redis:6379,password=...`  |
-| `Logging__LogLevel__Default`           | Log level                            | `Information`              |
+| Переменная                             | Описание                               | По умолчанию (dev)          |
+|----------------------------------------|----------------------------------------|-----------------------------|
+| `ASPNETCORE_ENVIRONMENT`               | Среда выполнения                       | `Development`               |
+| `ConnectionStrings__DefaultConnection` | Строка подключения к PostgreSQL        | `Host=postgres;Database=...`|
+| `Jwt__SecretKey`                       | Ключ подписи JWT (минимум 32 символа)  | —                           |
+| `Jwt__Issuer`                          | Издатель JWT                           | `ResX`                      |
+| `Jwt__Audience`                        | Аудитория JWT                          | `ResX`                      |
+| `Jwt__ExpiryMinutes`                   | Время жизни access-токена (минуты)     | `60`                        |
+| `RabbitMQ__HostName`                   | Хост брокера RabbitMQ                  | `rabbitmq`                  |
+| `RabbitMQ__UserName`                   | Имя пользователя RabbitMQ              | `guest`                     |
+| `RabbitMQ__Password`                   | Пароль RabbitMQ                        | —                           |
+| `Redis__ConnectionString`              | Строка подключения к Redis             | `redis:6379,password=...`   |
+| `Logging__LogLevel__Default`           | Уровень логирования                    | `Information`               |
 
-### Files Service only
+### Только Files Service
 
-| Variable         | Description                         | Default (dev)          |
-|------------------|-------------------------------------|------------------------|
-| `S3__ServiceUrl` | S3 endpoint URL                     | `http://minio:9000`    |
-| `S3__AccessKey`  | S3 access key                       | `minioadmin`           |
-| `S3__SecretKey`  | S3 secret key                       | —                      |
-| `S3__BucketName` | S3 bucket name                      | `resx-files`           |
-| `S3__Region`     | AWS region (Yandex: `ru-central1`)  | `us-east-1`            |
+| Переменная       | Описание                              | По умолчанию (dev)     |
+|------------------|---------------------------------------|------------------------|
+| `S3__ServiceUrl` | URL S3-эндпоинта                      | `http://minio:9000`    |
+| `S3__AccessKey`  | Access key S3                         | `minioadmin`           |
+| `S3__SecretKey`  | Secret key S3                         | —                      |
+| `S3__BucketName` | Имя bucket S3                         | `resx-files`           |
+| `S3__Region`     | Регион AWS (Yandex: `ru-central1`)    | `us-east-1`            |
 
-### Analytics Service only
+### Только Analytics Service
 
-| Variable                             | Description                           |
-|--------------------------------------|---------------------------------------|
-| `ConnectionStrings__UsersDb`         | Read connection to Users DB           |
-| `ConnectionStrings__ListingsDb`      | Read connection to Listings DB        |
-| `ConnectionStrings__TransactionsDb`  | Read connection to Transactions DB    |
+| Переменная                           | Описание                                  |
+|--------------------------------------|-------------------------------------------|
+| `ConnectionStrings__UsersDb`         | Read-подключение к БД Users               |
+| `ConnectionStrings__ListingsDb`      | Read-подключение к БД Listings            |
+| `ConnectionStrings__TransactionsDb`  | Read-подключение к БД Transactions        |
 
 ---
 
 ## API Endpoints
 
-All endpoints are accessible via the API Gateway at `https://api.resx.ru` (prod) or `http://localhost:8080` (dev).
+Все endpoint'ы доступны через API Gateway: `https://api.resx.ru` (prod) или `http://localhost:8080` (dev).
 
 ### Identity Service `/api/auth`
 
-| Method | Path                        | Auth | Description                     |
-|--------|-----------------------------|------|---------------------------------|
-| POST   | `/api/auth/register`        | —    | Register new user               |
-| POST   | `/api/auth/login`           | —    | Login, returns JWT + refresh    |
-| POST   | `/api/auth/refresh`         | —    | Refresh access token            |
-| POST   | `/api/auth/logout`          | JWT  | Revoke refresh token            |
-| POST   | `/api/auth/confirm-email`   | —    | Confirm email with token        |
+| Метод | Путь                        | Auth | Описание                         |
+|-------|-----------------------------|------|----------------------------------|
+| POST  | `/api/auth/register`        | —    | Регистрация нового пользователя  |
+| POST  | `/api/auth/login`           | —    | Вход, возвращает JWT + refresh   |
+| POST  | `/api/auth/refresh`         | —    | Обновление access-токена         |
+| POST  | `/api/auth/logout`          | JWT  | Отзыв refresh-токена             |
+| POST  | `/api/auth/confirm-email`   | —    | Подтверждение email по токену    |
+| POST  | `/api/auth/change-password` | JWT  | Смена пароля                     |
 
 ### Users Service `/api/users`
 
-| Method | Path                      | Auth | Description                     |
-|--------|---------------------------|------|---------------------------------|
-| GET    | `/api/users/{id}`         | —    | Get user profile                |
-| PUT    | `/api/users/me`           | JWT  | Update own profile              |
-| GET    | `/api/users/{id}/ratings` | —    | Get user ratings                |
-| POST   | `/api/users/{id}/rate`    | JWT  | Submit rating for user          |
+| Метод | Путь                             | Auth  | Описание                            |
+|-------|----------------------------------|-------|-------------------------------------|
+| GET   | `/api/users/{id}`                | —     | Получить профиль пользователя       |
+| PUT   | `/api/users/me`                  | JWT   | Обновить собственный профиль        |
+| PUT   | `/api/users/me/avatar`           | JWT   | Обновить аватар                     |
+| GET   | `/api/users/{id}/reviews`        | —     | Получить отзывы о пользователе      |
+| POST  | `/api/users/{id}/reviews`        | JWT   | Оставить отзыв о пользователе       |
+| GET   | `/api/users/eco-leaderboard`     | —     | Эко-рейтинг пользователей           |
 
-### Listings Service `/api/listings`
+### Listings Service `/api/listings`, `/api/categories`
 
-| Method | Path                          | Auth | Description                   |
-|--------|-------------------------------|------|-------------------------------|
-| GET    | `/api/listings`               | —    | Search/filter listings        |
-| POST   | `/api/listings`               | JWT  | Create listing                |
-| GET    | `/api/listings/{id}`          | —    | Get listing details           |
-| PUT    | `/api/listings/{id}`          | JWT  | Update own listing            |
-| DELETE | `/api/listings/{id}`          | JWT  | Delete own listing            |
-| GET    | `/api/listings/categories`    | —    | List all categories           |
-| GET    | `/api/listings/my`            | JWT  | Get current user's listings   |
+| Метод  | Путь                            | Auth | Описание                             |
+|--------|---------------------------------|------|--------------------------------------|
+| GET    | `/api/listings`                 | —    | Поиск/фильтрация объявлений (кэш)    |
+| POST   | `/api/listings`                 | JWT  | Создать объявление (статус Draft)    |
+| GET    | `/api/listings/{id}`            | —    | Получить детали объявления           |
+| PUT    | `/api/listings/{id}`            | JWT  | Обновить своё объявление             |
+| DELETE | `/api/listings/{id}`            | JWT  | Удалить своё объявление              |
+| PATCH  | `/api/listings/{id}/status`     | JWT  | Изменить статус объявления           |
+| POST   | `/api/listings/{id}/photos`     | JWT  | Добавить фото к объявлению           |
+| GET    | `/api/listings/my`              | JWT  | Получить объявления текущего пользователя|
+| GET    | `/api/categories`               | —    | Список всех категорий                |
 
 ### Transactions Service `/api/transactions`
 
-| Method | Path                                | Auth | Description                    |
-|--------|-------------------------------------|------|--------------------------------|
-| POST   | `/api/transactions`                 | JWT  | Create transaction request     |
-| GET    | `/api/transactions/{id}`            | JWT  | Get transaction details        |
-| POST   | `/api/transactions/{id}/confirm`    | JWT  | Confirm receipt                |
-| POST   | `/api/transactions/{id}/cancel`     | JWT  | Cancel transaction             |
-| GET    | `/api/transactions/my`              | JWT  | Get my transactions            |
+| Метод | Путь                                     | Auth | Описание                                      |
+|-------|------------------------------------------|------|-----------------------------------------------|
+| GET   | `/api/transactions`                      | JWT  | Мои транзакции                                |
+| POST  | `/api/transactions`                      | JWT  | Создать транзакцию (вызывает получатель)      |
+| GET   | `/api/transactions/{id}`                 | JWT  | Получить детали транзакции                    |
+| POST  | `/api/transactions/{id}/agree`           | JWT  | Донор соглашается (Pending → DonorAgreed)     |
+| POST  | `/api/transactions/{id}/confirm-receipt` | JWT  | Получатель подтверждает (DonorAgreed → Completed)|
+| POST  | `/api/transactions/{id}/cancel`          | JWT  | Отменить транзакцию (любой участник)          |
+| POST  | `/api/transactions/{id}/dispute`         | JWT  | Открыть спор по транзакции                    |
 
-### Messaging Service `/api/messages`
+### Messaging Service `/api/messaging`
 
-| Method    | Path                              | Auth | Description                   |
-|-----------|-----------------------------------|------|-------------------------------|
-| GET       | `/api/messages/chats`             | JWT  | List user's chats             |
-| GET       | `/api/messages/chats/{id}`        | JWT  | Get chat messages             |
-| POST      | `/api/messages/chats`             | JWT  | Start new chat                |
-| POST      | `/api/messages/chats/{id}/send`   | JWT  | Send message                  |
-| WebSocket | `/hubs/messaging`                 | JWT  | Real-time SignalR hub         |
+| Метод     | Путь                                          | Auth | Описание                       |
+|-----------|-----------------------------------------------|------|--------------------------------|
+| GET       | `/api/messaging/conversations`                | JWT  | Список диалогов пользователя   |
+| GET       | `/api/messaging/conversations/{id}/messages`  | JWT  | Сообщения диалога              |
+| POST      | `/api/messaging/conversations`                | JWT  | Начать новый диалог            |
+| POST      | `/api/messaging/conversations/{id}/messages`  | JWT  | Отправить сообщение            |
+| POST      | `/api/messaging/conversations/{id}/read`      | JWT  | Отметить сообщения прочитанными|
+| WebSocket | `/hubs/messaging`                             | JWT  | Real-time SignalR hub          |
 
 ### Notifications Service `/api/notifications`
 
-| Method | Path                              | Auth | Description                |
-|--------|-----------------------------------|------|----------------------------|
-| GET    | `/api/notifications`              | JWT  | Get notifications          |
-| PUT    | `/api/notifications/{id}/read`    | JWT  | Mark as read               |
-| PUT    | `/api/notifications/read-all`     | JWT  | Mark all as read           |
-| DELETE | `/api/notifications/{id}`         | JWT  | Delete notification        |
+| Метод | Путь                                   | Auth | Описание                         |
+|-------|----------------------------------------|------|----------------------------------|
+| GET   | `/api/notifications`                   | JWT  | Получить уведомления (с пагинацией)|
+| POST  | `/api/notifications/{id}/read`         | JWT  | Отметить уведомление прочитанным |
+| POST  | `/api/notifications/read-all`          | JWT  | Отметить все уведомления прочитанными|
 
 ### Charity Service `/api/charity`
 
-| Method | Path                                  | Auth | Description                    |
-|--------|---------------------------------------|------|--------------------------------|
-| GET    | `/api/charity/campaigns`              | —    | List active campaigns          |
-| POST   | `/api/charity/campaigns`              | JWT  | Create campaign (NGO only)     |
-| GET    | `/api/charity/campaigns/{id}`         | —    | Get campaign details           |
-| POST   | `/api/charity/campaigns/{id}/donate`  | JWT  | Donate item to campaign        |
+| Метод | Путь                                          | Auth  | Описание                                   |
+|-------|-----------------------------------------------|-------|--------------------------------------------|
+| GET   | `/api/charity/requests`                       | —     | Список активных благотворительных заявок   |
+| GET   | `/api/charity/requests/{id}`                  | —     | Детали благотворительной заявки            |
+| POST  | `/api/charity/requests`                       | JWT   | Создать заявку (только верифицированная НКО)|
+| POST  | `/api/charity/requests/{id}/cancel`           | Admin | Отменить благотворительную заявку          |
+| POST  | `/api/charity/requests/{id}/complete`         | Admin | Завершить благотворительную заявку         |
+| GET   | `/api/charity/organizations/{id}`             | —     | Получить данные организации                |
+| POST  | `/api/charity/organizations`                  | JWT   | Зарегистрировать новую организацию         |
+| PUT   | `/api/charity/organizations/{id}/verify`      | Admin | Верифицировать организацию                 |
+| PUT   | `/api/charity/organizations/{id}/reject`      | Admin | Отклонить верификацию организации          |
 
 ### Disputes Service `/api/disputes`
 
-| Method | Path                            | Auth | Description                   |
-|--------|---------------------------------|------|-------------------------------|
-| POST   | `/api/disputes`                 | JWT  | File new dispute              |
-| GET    | `/api/disputes/{id}`            | JWT  | Get dispute details           |
-| POST   | `/api/disputes/{id}/evidence`   | JWT  | Upload evidence               |
-| PUT    | `/api/disputes/{id}/resolve`    | JWT  | Resolve dispute (moderator)   |
+| Метод | Путь                            | Auth       | Описание                              |
+|-------|---------------------------------|------------|---------------------------------------|
+| GET   | `/api/disputes`                 | JWT        | Мои споры                             |
+| POST  | `/api/disputes`                 | JWT        | Открыть новый спор                    |
+| GET   | `/api/disputes/{id}`            | JWT        | Детали спора с доказательствами       |
+| POST  | `/api/disputes/{id}/evidence`   | JWT        | Добавить доказательство к спору       |
+| POST  | `/api/disputes/{id}/resolve`    | Moderator  | Разрешить спор с выводом              |
+| POST  | `/api/disputes/{id}/close`      | Moderator  | Закрыть спор без решения              |
+| GET   | `/api/disputes/open`            | Moderator  | Список открытых/рассматриваемых споров|
 
 ### Files Service `/api/files`
 
-| Method | Path                   | Auth | Description                       |
-|--------|------------------------|------|-----------------------------------|
-| POST   | `/api/files/upload`    | JWT  | Upload file (multipart/form-data) |
-| GET    | `/api/files/{id}`      | —    | Get file metadata                 |
-| GET    | `/api/files/{id}/url`  | —    | Get pre-signed download URL       |
-| DELETE | `/api/files/{id}`      | JWT  | Delete own file                   |
+| Метод  | Путь                   | Auth | Описание                              |
+|--------|------------------------|------|---------------------------------------|
+| POST   | `/api/files/upload`    | JWT  | Загрузить файл (multipart/form-data)  |
+| GET    | `/api/files/{id}/url`  | JWT  | Получить pre-signed URL для скачивания|
+| DELETE | `/api/files/{id}`      | JWT  | Удалить свой файл                     |
 
 ### Analytics Service `/api/analytics`
 
-| Method | Path                          | Auth | Description                        |
-|--------|-------------------------------|------|------------------------------------|
-| GET    | `/api/analytics/eco-stats`    | —    | Platform-wide eco impact stats     |
-| GET    | `/api/analytics/categories`   | —    | Item category activity stats       |
-| GET    | `/api/analytics/cities`       | —    | Activity breakdown by city         |
+| Метод | Путь                          | Auth | Описание                              |
+|-------|-------------------------------|------|---------------------------------------|
+| GET   | `/api/analytics/eco-stats`    | —    | Эко-статистика всей платформы         |
+| GET   | `/api/analytics/categories`   | —    | Статистика активности по категориям   |
+| GET   | `/api/analytics/cities`       | —    | Разбивка активности по городам        |
 
 ---
 
-## Development Workflow
+## Доменные модели
 
-### Building locally (without Docker)
+### Status Machine объявлений
+
+Объявления создаются в статусе **Draft**. Владелец должен явно опубликовать их.
+
+```
+Draft ──────────────────────────────────► Cancelled
+  │
+  ▼
+Active ──► Reserved ──► Completed
+  │            │
+  ▼            ▼
+Cancelled   Cancelled
+  ▲
+Moderated ──► Active
+  │
+  ▼
+Cancelled
+```
+
+| Переход                 | Инициатор               |
+|-------------------------|-------------------------|
+| Draft → Active          | Владелец (публикация)   |
+| Draft → Cancelled       | Владелец (удаление черновика)|
+| Active → Reserved       | Владелец                |
+| Active → Moderated      | Модератор               |
+| Active → Cancelled      | Владелец                |
+| Reserved → Completed    | Владелец                |
+| Reserved → Active       | Владелец (снять резерв) |
+| Reserved → Cancelled    | Владелец                |
+| Moderated → Active      | Модератор (одобрение)   |
+| Moderated → Cancelled   | Модератор (отклонение)  |
+
+### Status Machine транзакций
+
+Транзакцию инициирует **получатель**, запрашивая вещь у донора.
+
+```
+Pending ──► DonorAgreed ──► Completed
+   │              │
+   ▼              ▼
+Cancelled      Cancelled
+   │              │
+   ▼              ▼
+Disputed       Disputed
+```
+
+| Переход                     | Инициатор                      |
+|-----------------------------|--------------------------------|
+| Pending → DonorAgreed       | Донор (`/agree`)               |
+| DonorAgreed → Completed     | Получатель (`/confirm-receipt`)|
+| Pending → Cancelled         | Любой участник                 |
+| DonorAgreed → Cancelled     | Любой участник                 |
+| Pending → Disputed          | Любой участник                 |
+| DonorAgreed → Disputed      | Любой участник                 |
+
+### Status Machine споров
+
+```
+Open ──► UnderReview ──► Resolved
+  └───────────────────────────────► Closed
+```
+
+### Верификация организаций
+
+```
+Pending ──► Verified
+    └──────► Rejected
+```
+
+Только **верифицированные** организации могут создавать благотворительные заявки.
+
+---
+
+## Стратегия кэширования
+
+Redis используется в трёх сервисах с разными подходами:
+
+### Listings — version-based cache invalidation
+
+Все ответы `GET /api/listings` кэшируются на **5 минут**. В Redis хранится монотонный счётчик версий (`listings:version`), который инкрементируется при любом изменении (создание, обновление, удаление, смена статуса). Ключ кэша содержит версию, поэтому устаревшие записи обходятся автоматически — без явного удаления.
+
+```
+Cache key: listings:v{version}:p{page}:s{size}:cat{catId}:cond{cond}:tr{type}:city{city}:q{query}
+TTL: 5 минут
+```
+
+### Users — кэш профиля с точечной инвалидацией
+
+Профили пользователей кэшируются на **10 минут**. Запись явно удаляется при любом изменении профиля (обновление, аватар, новый отзыв, обновление эко-статистики).
+
+```
+Cache key: users:profile:{userId}
+TTL: 10 минут
+Инвалидация: UpdateUserProfile, UpdateAvatar, AddReview, UpdateEcoStats
+```
+
+### Identity — блэклист refresh-токенов
+
+Отозванные и ротированные refresh-токены добавляются в Redis-блэклист на **30 дней** (совпадает со сроком жизни токена). При каждом запросе на обновление токена блэклист проверяется до обращения к базе данных — это защищает от replay-атак с минимальными накладными расходами.
+
+```
+Cache key: identity:token:blacklist:{token}
+TTL: 30 дней
+Записывается: Logout, ротация токена в RefreshToken
+```
+
+---
+
+## Интеграционные тесты
+
+Для каждого сервиса есть отдельный проект интеграционных тестов, использующий реальный экземпляр PostgreSQL через **Testcontainers**. База данных сбрасывается между тестами с помощью **Respawner**.
+
+```
+tests/
+├── ResX.IntegrationTests.Common/       # Общие fixtures, JWT helpers, HTTP extensions
+├── ResX.Identity.IntegrationTests/
+├── ResX.Users.IntegrationTests/
+├── ResX.Listings.IntegrationTests/
+├── ResX.Transactions.IntegrationTests/
+├── ResX.Messaging.IntegrationTests/
+├── ResX.Notifications.IntegrationTests/
+├── ResX.Charity.IntegrationTests/
+├── ResX.Disputes.IntegrationTests/
+├── ResX.Files.IntegrationTests/
+└── ResX.Analytics.IntegrationTests/
+```
+
+### Запуск тестов
 
 ```bash
-# Restore all packages
+# Все интеграционные тесты (требуется Docker для Testcontainers)
+dotnet test ResX.sln
+
+# Тесты отдельного сервиса
+dotnet test tests/ResX.Listings.IntegrationTests/
+dotnet test tests/ResX.Transactions.IntegrationTests/
+dotnet test tests/ResX.Disputes.IntegrationTests/
+```
+
+> Тесты автоматически поднимают контейнер PostgreSQL — ручная настройка не нужна.
+
+---
+
+## Рабочий процесс разработки
+
+### Локальная сборка (без Docker)
+
+```bash
+# Восстановить все пакеты
 dotnet restore ResX.sln
 
-# Build the entire solution
+# Собрать всё решение
 dotnet build ResX.sln
 
-# Run a specific service (e.g., Listings)
+# Запустить отдельный сервис (например, Listings)
 cd src/Services/Listings/ResX.Listings.API
 dotnet run
 ```
 
-### Running tests
+### Миграции базы данных
 
-```bash
-# All tests
-dotnet test ResX.sln
+Каждый сервис запускает миграции FluentMigrator автоматически при старте. Миграции — **только аддитивные**: никогда не редактируйте существующие классы миграций, всегда создавайте новые.
 
-# Tests for a specific service
-dotnet test src/Services/Listings/ResX.Listings.Tests/
-```
+### Добавление нового integration event
 
-### Database migrations
+1. Определите класс события в папке `Application/IntegrationEvents/` публикующего сервиса
+2. Опубликуйте через `IEventBus.PublishAsync()` в обработчике команды
+3. Создайте обработчик в потребляющем сервисе, реализующий `IIntegrationEventHandler<TEvent>`
+4. Зарегистрируйте обработчик в `DependencyInjection.cs` слоя Infrastructure потребляющего сервиса
 
-Each service runs FluentMigrator migrations automatically on startup. To run migrations manually:
+### Добавление нового gRPC endpoint
 
-```bash
-cd src/Services/Listings/ResX.Listings.API
-dotnet run -- migrate
-```
+1. Добавьте метод в соответствующий `.proto`-файл в `src/Protos/`
+2. Пересоберите решение (генерация кода из Protobuf запускается автоматически)
+3. Реализуйте серверный метод сервиса в Infrastructure
+4. Внедрите сгенерированный gRPC-клиент в потребляющих сервисах
 
-### Adding a new integration event
+### Соглашения по коду
 
-1. Define the event class in `ResX.Common/Events/`
-2. Publish in the source service via `IEventBus.PublishAsync()`
-3. Create a handler in the consuming service implementing `IIntegrationEventHandler<TEvent>`
-4. Register the handler in `DependencyInjection.cs` of the consuming service's Infrastructure layer
-
-### Adding a new gRPC endpoint
-
-1. Add the method to the relevant `.proto` file in `src/Protos/`
-2. Rebuild the solution (Protobuf code generation runs automatically)
-3. Implement the server-side service method in Infrastructure
-4. Inject the generated gRPC client in consuming services
-
-### Code conventions
-
-- Nullability enabled everywhere (`<Nullable>enable</Nullable>`)
-- Implicit usings enabled
-- `System.Text.Json` for all serialization (no Newtonsoft.Json)
-- Async/await throughout — no blocking calls (`.Result`, `.Wait()`)
-- Domain logic only in Domain layer; no business logic in controllers
-- Every aggregate state change must raise domain events
+- Nullable везде включён (`<Nullable>enable</Nullable>`)
+- Implicit usings включены
+- `System.Text.Json` для всей сериализации (без Newtonsoft.Json)
+- Async/await везде — никаких блокирующих вызовов (`.Result`, `.Wait()`)
+- Доменная логика только в слое Domain; никакой бизнес-логики в контроллерах или репозиториях
+- Каждое изменение состояния агрегата должно поднимать domain event
+- Контроллеры не должны напрямую внедрять репозитории — все чтения/записи проходят через MediatR
 
 ---
 
-## Project Structure
+## Структура проекта
 
 ```
 ResX/
 ├── src/
 │   ├── BuildingBlocks/
-│   │   ├── ResX.Common/               # Shared base classes (AggregateRoot, ValueObject, Result<T>, etc.)
-│   │   ├── ResX.EventBus.RabbitMQ/    # RabbitMQ event bus implementation
-│   │   ├── ResX.Caching.Redis/        # Redis distributed cache
-│   │   └── ResX.Storage.S3/           # S3/Yandex Object Storage client
+│   │   ├── ResX.Common/               # Базовые классы: AggregateRoot, Entity, ValueObject, исключения
+│   │   ├── ResX.EventBus.RabbitMQ/    # Реализация IEventBus через RabbitMQ
+│   │   ├── ResX.Caching.Redis/        # Реализация ICacheService через Redis
+│   │   └── ResX.Storage.S3/           # S3/MinIO storage client
 │   ├── Protos/
 │   │   ├── identity.proto
 │   │   ├── users.proto
@@ -517,20 +666,31 @@ ResX/
 │   ├── Services/
 │   │   ├── Analytics/
 │   │   │   ├── ResX.Analytics.Application/
-│   │   │   ├── ResX.Analytics.Domain/
 │   │   │   ├── ResX.Analytics.Infrastructure/
 │   │   │   └── ResX.Analytics.API/
-│   │   ├── Charity/        (same 4-layer structure)
-│   │   ├── Disputes/       (same 4-layer structure)
-│   │   ├── Files/          (same 4-layer structure)
-│   │   ├── Identity/       (same 4-layer structure)
-│   │   ├── Listings/       (same 4-layer structure)
-│   │   ├── Messaging/      (same 4-layer structure)
-│   │   ├── Notifications/  (same 4-layer structure)
-│   │   ├── Transactions/   (same 4-layer structure)
-│   │   └── Users/          (same 4-layer structure)
+│   │   ├── Charity/        (аналогичная 3-слойная структура)
+│   │   ├── Disputes/       (аналогичная 3-слойная структура)
+│   │   ├── Files/          (аналогичная 3-слойная структура)
+│   │   ├── Identity/       (аналогичная 3-слойная структура)
+│   │   ├── Listings/       (аналогичная 3-слойная структура)
+│   │   ├── Messaging/      (аналогичная 3-слойная структура)
+│   │   ├── Notifications/  (аналогичная 3-слойная структура)
+│   │   ├── Transactions/   (аналогичная 3-слойная структура)
+│   │   └── Users/          (аналогичная 3-слойная структура)
 │   └── Gateway/
 │       └── ResX.ApiGateway/           # YARP reverse proxy gateway
+├── tests/
+│   ├── ResX.IntegrationTests.Common/  # Общее: PostgresContainerFixture, JwtTokenHelper, HttpClientExtensions
+│   ├── ResX.Analytics.IntegrationTests/
+│   ├── ResX.Charity.IntegrationTests/
+│   ├── ResX.Disputes.IntegrationTests/
+│   ├── ResX.Files.IntegrationTests/
+│   ├── ResX.Identity.IntegrationTests/
+│   ├── ResX.Listings.IntegrationTests/
+│   ├── ResX.Messaging.IntegrationTests/
+│   ├── ResX.Notifications.IntegrationTests/
+│   ├── ResX.Transactions.IntegrationTests/
+│   └── ResX.Users.IntegrationTests/
 ├── k8s/
 │   ├── namespace.yaml
 │   ├── configmap.yaml
@@ -546,44 +706,44 @@ ResX/
 │       ├── microservices.yaml
 │       └── api-gateway.yaml
 ├── scripts/
-│   └── init-databases.sql             # Creates all PostgreSQL databases on first start
-├── docker-compose.yml                 # Full local environment orchestration
-├── docker-compose.override.yml        # Dev overrides (debug logging, hot-reload)
-└── ResX.sln                           # Visual Studio solution (44 projects)
+│   └── init-databases.sql             # Создаёт все БД PostgreSQL при первом запуске
+├── docker-compose.yml                 # Полная оркестрация локального окружения
+├── docker-compose.override.yml        # Dev-переопределения (debug-логирование, hot-reload)
+└── ResX.sln                           # Visual Studio solution
 ```
 
 ---
 
-## Contributing
+## Участие в разработке
 
-1. **Fork** the repository and create a feature branch:
+1. **Сделайте fork** репозитория и создайте feature-ветку:
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-2. **Follow Clean Architecture**: business logic goes in Domain or Application layers, never in Infrastructure or API.
+2. **Следуйте Clean Architecture**: бизнес-логика — в слоях Domain или Application, но не в Infrastructure или API.
 
-3. **Write tests**: unit tests for domain logic, integration tests for repositories and API endpoints.
+3. **Пишите тесты**: интеграционные тесты для репозиториев и API endpoint'ов с использованием Testcontainers.
 
-4. **Keep migrations additive**: never edit existing FluentMigrator migration classes — always create new ones.
+4. **Миграции только аддитивные**: никогда не редактируйте существующие классы миграций FluentMigrator — всегда создавайте новые.
 
-5. **Open a Pull Request** against `main` with a clear description and relevant issue numbers.
+5. **Откройте Pull Request** в `main` с понятным описанием и номерами связанных задач.
 
-### Branch naming
+### Именование веток
 
-| Type      | Pattern                     |
-|-----------|-----------------------------|
-| Feature   | `feature/short-description` |
-| Bug fix   | `fix/short-description`     |
-| Refactor  | `refactor/short-description`|
-| Infra     | `infra/short-description`   |
-
----
-
-## License
-
-This project is proprietary software. All rights reserved.
+| Тип           | Шаблон                      |
+|---------------|-----------------------------|
+| Функция       | `feature/short-description` |
+| Исправление   | `fix/short-description`     |
+| Рефакторинг   | `refactor/short-description`|
+| Инфраструктура| `infra/short-description`   |
 
 ---
 
-*Built with .NET 10 · PostgreSQL · RabbitMQ · Redis · Kubernetes*
+## Лицензия
+
+Данное программное обеспечение является проприетарным. Все права защищены.
+
+---
+
+*Создано на .NET 10 · PostgreSQL · RabbitMQ · Redis · Kubernetes*
