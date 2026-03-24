@@ -103,7 +103,7 @@ services:
     container_name: resx-identity
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__IdentityDb: "Host=postgres;Port=5432;Database=resx_identity;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -134,7 +134,7 @@ services:
     container_name: resx-users
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__UsersDb: "Host=postgres;Port=5432;Database=resx_users;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -166,7 +166,7 @@ services:
     container_name: resx-listings
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ListingsDb: "Host=postgres;Port=5432;Database=resx_listings;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -198,7 +198,7 @@ services:
     container_name: resx-transactions
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__TransactionsDb: "Host=postgres;Port=5432;Database=resx_transactions;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -227,7 +227,7 @@ services:
     container_name: resx-messaging
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__MessagingDb: "Host=postgres;Port=5432;Database=resx_messaging;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -259,7 +259,7 @@ services:
     container_name: resx-notifications
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__NotificationsDb: "Host=postgres;Port=5432;Database=resx_notifications;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -288,7 +288,7 @@ services:
     container_name: resx-charity
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__CharityDb: "Host=postgres;Port=5432;Database=resx_charity;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -317,7 +317,7 @@ services:
     container_name: resx-disputes
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DisputesDb: "Host=postgres;Port=5432;Database=resx_disputes;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -346,7 +346,7 @@ services:
     container_name: resx-files
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__FilesDb: "Host=postgres;Port=5432;Database=resx_files;Username=postgres;Password=postgres"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
@@ -376,7 +376,7 @@ services:
     container_name: resx-analytics
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__UsersDb: "Host=postgres;Port=5432;Database=resx_users;Username=postgres;Password=postgres"
       ConnectionStrings__ListingsDb: "Host=postgres;Port=5432;Database=resx_listings;Username=postgres;Password=postgres"
       ConnectionStrings__TransactionsDb: "Host=postgres;Port=5432;Database=resx_transactions;Username=postgres;Password=postgres"
@@ -399,7 +399,7 @@ services:
     container_name: resx-gateway
     networks: [resx-network]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
       Jwt__Audience: "ResX"
