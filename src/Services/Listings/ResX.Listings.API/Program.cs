@@ -56,17 +56,7 @@ builder.Services.AddSwaggerGen(options =>
         Name = "Authorization", Type = SecuritySchemeType.Http,
         Scheme = "bearer", BearerFormat = "JWT", In = ParameterLocation.Header
     });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                    { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            []
-        }
-    });
+    options.OperationFilter<AuthOperationFilter>();
 });
 
 builder.Services.AddGrpc();

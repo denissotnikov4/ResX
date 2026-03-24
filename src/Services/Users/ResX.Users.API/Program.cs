@@ -41,13 +41,26 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(o =>
+{
     o.SwaggerDoc(
         name: "v1",
         info: new OpenApiInfo
         {
             Title = "ResX Users API",
             Version = "v1"
-        }));
+        });
+
+    o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
+
+    o.OperationFilter<AuthOperationFilter>();
+});
 
 builder.Services.AddGrpc();
 

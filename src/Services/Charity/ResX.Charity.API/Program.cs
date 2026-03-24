@@ -37,14 +37,19 @@ builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services
-    .AddSwaggerGen(o => o.SwaggerDoc(
-        name: "v1", 
-        info: new OpenApiInfo
-        {
-            Title = "ResX Charity API",
-            Version = "v1"
-        }));
+builder.Services.AddSwaggerGen(o =>
+{
+    o.SwaggerDoc("v1", new OpenApiInfo { Title = "ResX Charity API", Version = "v1" });
+    o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
+    o.OperationFilter<AuthOperationFilter>();
+});
 
 builder.Services.AddHealthChecks()
     .AddNpgSql(
