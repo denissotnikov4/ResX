@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ResX.Common.Models;
 using ResX.Users.Application.Commands.AddReview;
 using ResX.Users.Application.Commands.UpdateAvatar;
 using ResX.Users.Application.Commands.UpdateUserProfile;
@@ -25,6 +26,8 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType<UserProfileDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProfile(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetUserProfileQuery(id), cancellationToken);
@@ -34,6 +37,8 @@ public class UsersController : ControllerBase
 
     [HttpGet("me")]
     [Authorize]
+    [ProducesResponseType<UserProfileDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -45,6 +50,9 @@ public class UsersController : ControllerBase
 
     [HttpPut("me")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UpdateProfile(
         [FromBody] UpdateProfileRequest request,
         CancellationToken cancellationToken)
@@ -60,6 +68,9 @@ public class UsersController : ControllerBase
 
     [HttpPut("me/avatar")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UpdateAvatar(
         [FromBody] UpdateAvatarRequest request,
         CancellationToken cancellationToken)
@@ -72,6 +83,8 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}/reviews")]
+    [ProducesResponseType<PagedList<ReviewDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetReviews(
         Guid id,
         [FromQuery] int pageNumber = 1,
@@ -87,6 +100,9 @@ public class UsersController : ControllerBase
 
     [HttpPost("{id:guid}/reviews")]
     [Authorize]
+    [ProducesResponseType<ReviewCreatedDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> AddReview(
         Guid id,
         [FromBody] AddReviewRequest request,
@@ -102,10 +118,11 @@ public class UsersController : ControllerBase
             new AddReviewCommand(id, reviewerId, request.ReviewerName, request.Rating, request.Comment),
             cancellationToken);
 
-        return Ok(new { reviewId });
+        return Ok(new ReviewCreatedDto(reviewId));
     }
 
     [HttpGet("leaderboard")]
+    [ProducesResponseType<PagedList<UserProfileDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetEcoLeaderboard(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,

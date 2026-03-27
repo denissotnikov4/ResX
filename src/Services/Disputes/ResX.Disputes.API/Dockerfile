@@ -15,5 +15,5 @@ WORKDIR "/src/Services/Disputes/ResX.Disputes.API"
 RUN dotnet publish "ResX.Disputes.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 FROM base AS final
 WORKDIR /app
-COPY --from=0 /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "ResX.Disputes.API.dll"]

@@ -15,5 +15,5 @@ WORKDIR "/src/Services/Charity/ResX.Charity.API"
 RUN dotnet publish "ResX.Charity.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 FROM base AS final
 WORKDIR /app
-COPY --from=0 /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "ResX.Charity.API.dll"]

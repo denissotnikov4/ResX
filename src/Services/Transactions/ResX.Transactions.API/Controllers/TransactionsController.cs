@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ResX.Common.Models;
 using ResX.Transactions.Application.Commands.AgreeTransaction;
 using ResX.Transactions.Application.Commands.CancelTransaction;
 using ResX.Transactions.Application.Commands.ConfirmReceipt;
@@ -26,10 +27,10 @@ public class TransactionsController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>
-    /// Возвращает список транзакций текущего пользователя (как донора, так и получателя).
-    /// </summary>
+    /// <summary>Возвращает список транзакций текущего пользователя (как донора, так и получателя).</summary>
     [HttpGet]
+    [ProducesResponseType<PagedList<TransactionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyTransactions(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -44,10 +45,11 @@ public class TransactionsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Возвращает транзакцию по идентификатору.
-    /// </summary>
+    /// <summary>Возвращает транзакцию по идентификатору.</summary>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType<TransactionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetTransactionByIdQuery(id), cancellationToken);
@@ -55,10 +57,11 @@ public class TransactionsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Создаёт новую транзакцию — запрос от получателя на получение вещи донора.
-    /// </summary>
+    /// <summary>Создаёт новую транзакцию — запрос от получателя на получение вещи донора.</summary>
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create(
         [FromBody] CreateTransactionRequest request,
         CancellationToken cancellationToken)
@@ -72,10 +75,12 @@ public class TransactionsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = transactionId }, new { id = transactionId });
     }
 
-    /// <summary>
-    /// Донор подтверждает согласие на передачу вещи. Переводит транзакцию из Pending в DonorAgreed.
-    /// </summary>
+    /// <summary>Донор подтверждает согласие на передачу вещи. Переводит транзакцию из Pending в DonorAgreed.</summary>
     [HttpPost("{id:guid}/agree")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Agree(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -85,10 +90,12 @@ public class TransactionsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Получатель подтверждает факт получения вещи. Переводит транзакцию в Completed.
-    /// </summary>
+    /// <summary>Получатель подтверждает факт получения вещи. Переводит транзакцию в Completed.</summary>
     [HttpPost("{id:guid}/confirm-receipt")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ConfirmReceipt(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -98,10 +105,11 @@ public class TransactionsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Отменяет транзакцию. Доступно любому участнику, пока транзакция не завершена
-    /// </summary>
+    /// <summary>Отменяет транзакцию. Доступно любому участнику, пока транзакция не завершена.</summary>
     [HttpPost("{id:guid}/cancel")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -111,10 +119,11 @@ public class TransactionsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Открывает спор по транзакции. Доступно любому участнику, пока транзакция не завершена и не отменена
-    /// </summary>
+    /// <summary>Открывает спор по транзакции. Доступно любому участнику, пока транзакция не завершена и не отменена.</summary>
     [HttpPost("{id:guid}/dispute")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Dispute(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();

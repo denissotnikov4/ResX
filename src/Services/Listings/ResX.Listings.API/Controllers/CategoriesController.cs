@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ResX.Listings.Application.DTOs;
 using ResX.Listings.Application.Queries.GetCategories;
 
 namespace ResX.Listings.API.Controllers;
@@ -18,6 +19,7 @@ public class CategoriesController : ControllerBase
 
     /// <summary>Returns all active listing categories ordered by display order.</summary>
     [HttpGet]
+    [ProducesResponseType<IReadOnlyList<CategoryResultDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var categories = await _mediator.Send(new GetCategoriesQuery(), cancellationToken);

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ResX.Notifications.Application.Commands.MarkAllNotificationsAsRead;
 using ResX.Notifications.Application.Commands.MarkNotificationAsRead;
+using ResX.Notifications.Application.DTOs;
 using ResX.Notifications.Application.Queries.GetMyNotifications;
 
 namespace ResX.Notifications.API.Controllers;
@@ -21,10 +22,10 @@ public class NotificationsController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>
-    /// Возвращает список уведомлений текущего пользователя с количеством непрочитанных уведомлений
-    /// </summary>
+    /// <summary>Возвращает список уведомлений текущего пользователя с количеством непрочитанных уведомлений.</summary>
     [HttpGet]
+    [ProducesResponseType<NotificationsPageDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyNotifications(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -40,10 +41,11 @@ public class NotificationsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Помечает конкретное уведомление как прочитанное
-    /// </summary>
+    /// <summary>Помечает конкретное уведомление как прочитанное.</summary>
     [HttpPost("{id:guid}/read")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -53,10 +55,10 @@ public class NotificationsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Помечает все уведомления текущего пользователя как прочитанные
-    /// </summary>
+    /// <summary>Помечает все уведомления текущего пользователя как прочитанные.</summary>
     [HttpPost("read-all")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();

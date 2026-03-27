@@ -27,10 +27,10 @@ public class DisputesController : ControllerBase
         _repository = repository;
     }
 
-    /// <summary>
-    /// Returns all disputes for the authenticated user
-    /// </summary>
+    /// <summary>Returns all disputes for the authenticated user.</summary>
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyDisputes(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -54,21 +54,23 @@ public class DisputesController : ControllerBase
         }));
     }
 
-    /// <summary>
-    /// Returns a dispute by its ID including all evidence
-    /// </summary>
+    /// <summary>Returns a dispute by its ID including all evidence.</summary>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType<DisputeDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var dto = await _mediator.Send(new GetDisputeQuery(id), cancellationToken);
         return Ok(dto);
     }
 
-    /// <summary>
-    /// Returns all open and under-review disputes
-    /// </summary>
+    /// <summary>Returns all open and under-review disputes.</summary>
     [HttpGet("open")]
     [Authorize(Roles = "Moderator,Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetOpenDisputes(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -79,10 +81,11 @@ public class DisputesController : ControllerBase
         return Ok(disputes);
     }
 
-    /// <summary>
-    /// Opens a new dispute for a transaction
-    /// </summary>
+    /// <summary>Opens a new dispute for a transaction.</summary>
     [HttpPost]
+    [ProducesResponseType<DisputeCreatedDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Open([FromBody] OpenDisputeRequest request, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -91,13 +94,14 @@ public class DisputesController : ControllerBase
             new OpenDisputeCommand(request.TransactionId, userId, request.RespondentId, request.Reason),
             cancellationToken);
 
-        return Ok(new { disputeId });
+        return Ok(new DisputeCreatedDto(disputeId));
     }
 
-    /// <summary>
-    /// Adds evidence (description and optional file URLs) to an open dispute
-    /// </summary>
+    /// <summary>Adds evidence (description and optional file URLs) to an open dispute.</summary>
     [HttpPost("{id:guid}/evidence")]
+    [ProducesResponseType<EvidenceCreatedDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> AddEvidence(
         Guid id,
         [FromBody] AddEvidenceRequest request,
@@ -109,14 +113,16 @@ public class DisputesController : ControllerBase
             new AddEvidenceCommand(id, userId, request.Description, request.FileUrls),
             cancellationToken);
 
-        return Ok(new { evidenceId });
+        return Ok(new EvidenceCreatedDto(evidenceId));
     }
 
-    /// <summary>
-    /// Resolves a dispute with a written resolution
-    /// </summary>
+    /// <summary>Resolves a dispute with a written resolution.</summary>
     [HttpPost("{id:guid}/resolve")]
     [Authorize(Roles = "Moderator,Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Resolve(
         Guid id,
         [FromBody] ResolveDisputeRequest request,
@@ -129,11 +135,13 @@ public class DisputesController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Closes a dispute without a formal resolution
-    /// </summary>
+    /// <summary>Closes a dispute without a formal resolution.</summary>
     [HttpPost("{id:guid}/close")]
     [Authorize(Roles = "Moderator,Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Close(Guid id, CancellationToken cancellationToken)
     {
         await _mediator.Send(new CloseDisputeCommand(id), cancellationToken);

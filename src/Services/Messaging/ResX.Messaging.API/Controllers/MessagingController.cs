@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ResX.Common.Models;
 using ResX.Messaging.Application.Commands.CreateConversation;
 using ResX.Messaging.Application.Commands.MarkMessagesAsRead;
 using ResX.Messaging.Application.Commands.SendMessage;
@@ -25,6 +26,8 @@ public class MessagingController : ControllerBase
     }
 
     [HttpGet("conversations")]
+    [ProducesResponseType<PagedList<ConversationDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetConversations(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -40,6 +43,9 @@ public class MessagingController : ControllerBase
     }
 
     [HttpPost("conversations")]
+    [ProducesResponseType<ConversationCreatedDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CreateConversation([FromBody] CreateConversationDto dto,
         CancellationToken cancellationToken)
     {
@@ -49,10 +55,13 @@ public class MessagingController : ControllerBase
             new CreateConversationCommand(userId, dto.RecipientId, dto.ListingId, dto.InitialMessage),
             cancellationToken);
 
-        return Ok(new { conversationId });
+        return Ok(new ConversationCreatedDto(conversationId));
     }
 
     [HttpGet("conversations/{conversationId:guid}/messages")]
+    [ProducesResponseType<PagedList<MessageDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMessages(
         Guid conversationId,
         [FromQuery] int pageNumber = 1,
@@ -69,6 +78,9 @@ public class MessagingController : ControllerBase
     }
 
     [HttpPost("conversations/{conversationId:guid}/messages")]
+    [ProducesResponseType<MessageDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SendMessage(
         Guid conversationId,
         [FromBody] SendMessageDto dto,
@@ -84,6 +96,8 @@ public class MessagingController : ControllerBase
     }
 
     [HttpPost("conversations/{conversationId:guid}/read")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> MarkAsRead(Guid conversationId, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
