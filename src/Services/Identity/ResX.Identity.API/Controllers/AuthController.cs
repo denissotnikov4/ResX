@@ -8,6 +8,7 @@ using ResX.Identity.Application.Commands.Logout;
 using ResX.Identity.Application.Commands.RefreshToken;
 using ResX.Identity.Application.Commands.RegisterUser;
 using ResX.Identity.Application.DTOs;
+using ResX.Identity.Application.Services;
 
 namespace ResX.Identity.API.Controllers;
 
@@ -17,17 +18,19 @@ namespace ResX.Identity.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ITokenService _tokenService;
 
-    public AuthController(IMediator mediator)
+    public AuthController(IMediator mediator, ITokenService tokenService)
     {
         _mediator = mediator;
+        _tokenService = tokenService;
     }
 
     /// <summary>
     /// Register a new user
     /// </summary>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(TokensDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register(
@@ -36,14 +39,16 @@ public class AuthController : ControllerBase
     {
         var tokens = await _mediator.Send(command, cancellationToken);
 
-        return CreatedAtAction(nameof(Register), tokens);
+        SetTokenCookies(tokens);
+
+        return Created();
     }
 
     /// <summary>
     /// Login with email/phone and password
     /// </summary>
     [HttpPost("login")]
-    [ProducesResponseType(typeof(TokensDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(
@@ -52,23 +57,31 @@ public class AuthController : ControllerBase
     {
         var tokens = await _mediator.Send(command, cancellationToken);
 
-        return Ok(tokens);
+        SetTokenCookies(tokens);
+
+        return NoContent();
     }
 
     /// <summary>
     /// Refresh access token
     /// </summary>
     [HttpPost("refresh")]
-    [ProducesResponseType(typeof(TokensDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Refresh(
-        [FromBody] RefreshTokenCommand command,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
-        var tokens = await _mediator.Send(command, cancellationToken);
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            return Unauthorized();
+        }
 
-        return Ok(tokens);
+        var tokens = await _mediator.Send(new RefreshTokenCommand(refreshToken), cancellationToken);
+
+        SetTokenCookies(tokens);
+
+        return NoContent();
     }
 
     /// <summary>
@@ -77,11 +90,17 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Logout(
-        [FromBody] LogoutCommand command,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            return NoContent();
+        }
+
+        await _mediator.Send(new LogoutCommand(refreshToken), cancellationToken);
+
+        ClearTokenCookies();
 
         return NoContent();
     }
@@ -107,6 +126,33 @@ public class AuthController : ControllerBase
         var command = new ChangePasswordCommand(userId, request.OldPassword, request.NewPassword);
         await _mediator.Send(command, cancellationToken);
 
+        ClearTokenCookies();
+
         return NoContent();
+    }
+
+    private void SetTokenCookies(TokensDto tokens)
+    {
+        Response.Cookies.Append("accessToken", tokens.AccessToken, new CookieOptions
+        {
+            HttpOnly = false,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            MaxAge = TimeSpan.FromMinutes(_tokenService.GetAccessTokenExpiryMinutes())
+        });
+
+        Response.Cookies.Append("refreshToken", tokens.RefreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            MaxAge = TimeSpan.FromDays(30)
+        });
+    }
+
+    private void ClearTokenCookies()
+    {
+        Response.Cookies.Delete("accessToken");
+        Response.Cookies.Delete("refreshToken");
     }
 }

@@ -49,7 +49,7 @@ public class TokenService : ITokenService
             issuer: _issuer,
             audience: _audience,
             claims: claims,
-            expires: GetAccessTokenExpiry(),
+            expires: DateTime.UtcNow.AddMinutes(_expiryMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -90,5 +90,5 @@ public class TokenService : ITokenService
         return principal;
     }
 
-    public DateTime GetAccessTokenExpiry() => DateTime.UtcNow.AddMinutes(_expiryMinutes);
+    public int GetAccessTokenExpiryMinutes() => _expiryMinutes;
 }

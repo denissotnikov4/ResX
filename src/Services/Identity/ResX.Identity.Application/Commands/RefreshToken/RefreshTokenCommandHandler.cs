@@ -48,7 +48,6 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, T
 
         var newAccessToken = _tokenService.GenerateAccessToken(user);
         var newRefreshTokenValue = _tokenService.GenerateRefreshToken();
-        var expiresAt = _tokenService.GetAccessTokenExpiry();
 
         var newRefreshToken = user.AddRefreshToken(newRefreshTokenValue, DateTime.UtcNow.AddDays(30));
 
@@ -63,6 +62,6 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, T
 
         _logger.LogInformation("Token refreshed for user {UserId}.", user.Id);
 
-        return new TokensDto(newAccessToken, newRefreshToken.Token, expiresAt);
+        return new TokensDto(newAccessToken, newRefreshToken.Token);
     }
 }

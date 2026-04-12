@@ -58,4 +58,26 @@ public static class HttpClientExtensions
         var content = JsonContent.Create(payload, options: JsonOptions);
         return client.PatchAsync(url, content);
     }
+
+    /// <summary>
+    /// Extracts a cookie value from the Set-Cookie response headers.
+    /// </summary>
+    public static string? GetCookieValue(this HttpResponseMessage response, string cookieName)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var cookies))
+        {
+            return null;
+        }
+
+        var prefix = $"{cookieName}=";
+        foreach (var cookie in cookies)
+        {
+            if (cookie.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return cookie[prefix.Length..].Split(';')[0];
+            }
+        }
+
+        return null;
+    }
 }

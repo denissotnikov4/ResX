@@ -11,5 +11,5 @@ public interface ITokenService
 
     ClaimsPrincipal GetPrincipalFromToken(string token);
 
-    DateTime GetAccessTokenExpiry();
+    int GetAccessTokenExpiryMinutes();
 }

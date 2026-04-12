@@ -1,7 +1,7 @@
 using System.Net;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using ResX.Identity.Application.Commands.RegisterUser;
-using ResX.Identity.Application.DTOs;
 using ResX.Identity.Domain.Enums;
 using ResX.Identity.IntegrationTests.Collections;
 using ResX.Identity.IntegrationTests.Fixtures;
@@ -19,7 +19,10 @@ public sealed class RegisterTests : IAsyncLifetime
     public RegisterTests(IdentityWebAppFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
     }
 
     public Task InitializeAsync() => _factory.ResetDatabaseAsync();
@@ -30,7 +33,7 @@ public sealed class RegisterTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task Register_WithValidDonor_Returns201WithTokens()
+    public async Task Register_WithValidDonor_Returns201WithCookies()
     {
         // Arrange
         var command = ValidRegisterCommand();
@@ -41,10 +44,10 @@ public sealed class RegisterTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var tokens = await response.ReadAsAsync<TokensDto>();
-        tokens.AccessToken.Should().NotBeNullOrWhiteSpace();
-        tokens.RefreshToken.Should().NotBeNullOrWhiteSpace();
-        tokens.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
+        var accessToken = response.GetCookieValue("accessToken");
+        var refreshToken = response.GetCookieValue("refreshToken");
+        accessToken.Should().NotBeNullOrWhiteSpace();
+        refreshToken.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]

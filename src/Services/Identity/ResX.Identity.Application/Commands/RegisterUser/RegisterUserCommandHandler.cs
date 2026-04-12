@@ -58,7 +58,6 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, T
 
         var accessToken = _tokenService.GenerateAccessToken(user);
         var refreshTokenValue = _tokenService.GenerateRefreshToken();
-        var expiresAt = _tokenService.GetAccessTokenExpiry();
 
         var refreshToken = user.AddRefreshToken(refreshTokenValue, DateTime.UtcNow.AddDays(30));
 
@@ -83,6 +82,6 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, T
 
         _logger.LogInformation("User {UserId} registered successfully.", user.Id);
 
-        return new TokensDto(accessToken, refreshToken.Token, expiresAt);
+        return new TokensDto(accessToken, refreshToken.Token);
     }
 }

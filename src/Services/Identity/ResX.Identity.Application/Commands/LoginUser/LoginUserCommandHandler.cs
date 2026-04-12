@@ -59,7 +59,6 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, TokensD
 
         var accessToken = _tokenService.GenerateAccessToken(user);
         var refreshTokenValue = _tokenService.GenerateRefreshToken();
-        var expiresAt = _tokenService.GetAccessTokenExpiry();
 
         var refreshToken = user.AddRefreshToken(refreshTokenValue, DateTime.UtcNow.AddDays(30));
 
@@ -67,6 +66,6 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, TokensD
 
         _logger.LogInformation("User {UserId} logged in.", user.Id);
 
-        return new TokensDto(accessToken, refreshToken.Token, expiresAt);
+        return new TokensDto(accessToken, refreshToken.Token);
     }
 }

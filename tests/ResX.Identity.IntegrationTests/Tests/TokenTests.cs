@@ -1,10 +1,8 @@
 using System.Net;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using ResX.Identity.Application.Commands.LoginUser;
-using ResX.Identity.Application.Commands.Logout;
-using ResX.Identity.Application.Commands.RefreshToken;
 using ResX.Identity.Application.Commands.RegisterUser;
-using ResX.Identity.Application.DTOs;
 using ResX.Identity.IntegrationTests.Collections;
 using ResX.Identity.IntegrationTests.Fixtures;
 using ResX.IntegrationTests.Common.Helpers;
@@ -18,10 +16,15 @@ public sealed class TokenTests : IAsyncLifetime
     private readonly IdentityWebAppFactory _factory;
     private readonly HttpClient _client;
 
+    private static readonly WebApplicationFactoryClientOptions HttpsOptions = new()
+    {
+        BaseAddress = new Uri("https://localhost")
+    };
+
     public TokenTests(IdentityWebAppFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateClient(HttpsOptions);
     }
 
     public Task InitializeAsync() => _factory.ResetDatabaseAsync();
@@ -32,30 +35,30 @@ public sealed class TokenTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task RefreshToken_WithValidRefreshToken_Returns200WithNewTokens()
+    public async Task RefreshToken_WithValidCookie_Returns204WithNewTokens()
     {
-        // Arrange — register and get tokens
-        var tokens = await RegisterAndLogin();
+        // Arrange — register and login (cookies are set automatically)
+        var originalTokens = await RegisterAndLogin();
 
-        // Act
-        var response = await _client.PostJsonAsync("/api/auth/refresh",
-            new RefreshTokenCommand(tokens.RefreshToken));
+        // Act — refresh endpoint reads refreshToken from cookie
+        var response = await _client.PostAsync("/api/auth/refresh", null);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var newTokens = await response.ReadAsAsync<TokensDto>();
-        newTokens.AccessToken.Should().NotBeNullOrWhiteSpace();
-        newTokens.RefreshToken.Should().NotBeNullOrWhiteSpace();
+        var newAccessToken = response.GetCookieValue("accessToken");
+        var newRefreshToken = response.GetCookieValue("refreshToken");
+        newAccessToken.Should().NotBeNullOrWhiteSpace();
+        newRefreshToken.Should().NotBeNullOrWhiteSpace();
         // New tokens should differ from original
-        newTokens.AccessToken.Should().NotBe(tokens.AccessToken);
+        newAccessToken.Should().NotBe(originalTokens.AccessToken);
     }
 
     [Fact]
-    public async Task RefreshToken_WithInvalidToken_Returns401()
+    public async Task RefreshToken_WithoutCookie_Returns401()
     {
-        var response = await _client.PostJsonAsync("/api/auth/refresh",
-            new RefreshTokenCommand("this-is-not-a-valid-refresh-token"));
+        using var freshClient = _factory.CreateClient(HttpsOptions);
+        var response = await freshClient.PostAsync("/api/auth/refresh", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -63,16 +66,23 @@ public sealed class TokenTests : IAsyncLifetime
     [Fact]
     public async Task RefreshToken_AfterRevoke_Returns401()
     {
-        // Arrange — log in, get tokens, then use refresh to get new tokens (revokes old)
+        // Arrange — register & login, save old refresh token
         var tokens = await RegisterAndLogin();
+        var oldRefreshToken = tokens.RefreshToken;
 
-        // Use the refresh token once (this revokes the original)
-        await _client.PostJsonAsync("/api/auth/refresh",
-            new RefreshTokenCommand(tokens.RefreshToken));
+        // Use the refresh token once (revokes the original, sets new cookies)
+        await _client.PostAsync("/api/auth/refresh", null);
 
-        // Act — try to use the original refresh token again (should be revoked)
-        var response = await _client.PostJsonAsync("/api/auth/refresh",
-            new RefreshTokenCommand(tokens.RefreshToken));
+        // Act — try to use the old refresh token via a fresh client (no cookie jar)
+        using var noCookiesClient = _factory.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost"),
+                HandleCookies = false
+            });
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://localhost/api/auth/refresh");
+        request.Headers.Add("Cookie", $"refreshToken={oldRefreshToken}");
+        var response = await noCookiesClient.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -82,13 +92,13 @@ public sealed class TokenTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task Logout_WithValidToken_Returns204()
+    public async Task Logout_WithValidCookies_Returns204()
     {
-        var tokens = await RegisterAndLogin();
-        _client.WithBearerToken(tokens.AccessToken);
+        // Arrange — register & login (sets accessToken + refreshToken cookies)
+        await RegisterAndLogin();
 
-        var response = await _client.PostJsonAsync("/api/auth/logout",
-            new LogoutCommand(tokens.RefreshToken));
+        // Act — logout reads both cookies automatically
+        var response = await _client.PostAsync("/api/auth/logout", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -96,9 +106,8 @@ public sealed class TokenTests : IAsyncLifetime
     [Fact]
     public async Task Logout_WithoutAuthentication_Returns401()
     {
-        _client.WithoutAuth();
-        var response = await _client.PostJsonAsync("/api/auth/logout",
-            new LogoutCommand("some-token"));
+        using var freshClient = _factory.CreateClient(HttpsOptions);
+        var response = await freshClient.PostAsync("/api/auth/logout", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -106,17 +115,12 @@ public sealed class TokenTests : IAsyncLifetime
     [Fact]
     public async Task Logout_ThenRefreshToken_Returns401()
     {
-        // Arrange — log in and then log out
-        var tokens = await RegisterAndLogin();
-        _client.WithBearerToken(tokens.AccessToken);
+        // Arrange — register, login, then logout (clears cookies + revokes token)
+        await RegisterAndLogin();
+        await _client.PostAsync("/api/auth/logout", null);
 
-        await _client.PostJsonAsync("/api/auth/logout",
-            new LogoutCommand(tokens.RefreshToken));
-
-        // Act — try to use the refresh token after logout
-        _client.WithoutAuth();
-        var response = await _client.PostJsonAsync("/api/auth/refresh",
-            new RefreshTokenCommand(tokens.RefreshToken));
+        // Act — try to refresh (cookies were cleared by logout)
+        var response = await _client.PostAsync("/api/auth/refresh", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -130,8 +134,7 @@ public sealed class TokenTests : IAsyncLifetime
     {
         var email = FakerExtensions.RandomEmail();
         var oldPassword = FakerExtensions.RandomPassword();
-        var tokens = await RegisterAndLogin(email, oldPassword);
-        _client.WithBearerToken(tokens.AccessToken);
+        await RegisterAndLogin(email, oldPassword);
 
         var response = await _client.PutJsonAsync("/api/auth/change-password",
             new { OldPassword = oldPassword, NewPassword = "NewSecurePass1!" });
@@ -143,8 +146,7 @@ public sealed class TokenTests : IAsyncLifetime
     public async Task ChangePassword_WithWrongOldPassword_Returns400OrForbidden()
     {
         var email = FakerExtensions.RandomEmail();
-        var tokens = await RegisterAndLogin(email, "CorrectPass1!");
-        _client.WithBearerToken(tokens.AccessToken);
+        await RegisterAndLogin(email, "CorrectPass1!");
 
         var response = await _client.PutJsonAsync("/api/auth/change-password",
             new { OldPassword = "WrongPass1!", NewPassword = "NewSecurePass1!" });
@@ -155,8 +157,8 @@ public sealed class TokenTests : IAsyncLifetime
     [Fact]
     public async Task ChangePassword_WithoutAuthentication_Returns401()
     {
-        _client.WithoutAuth();
-        var response = await _client.PutJsonAsync("/api/auth/change-password",
+        using var freshClient = _factory.CreateClient(HttpsOptions);
+        var response = await freshClient.PutJsonAsync("/api/auth/change-password",
             new { OldPassword = "Old1!", NewPassword = "New1!" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -166,7 +168,9 @@ public sealed class TokenTests : IAsyncLifetime
     // Helpers
     // -------------------------------------------------------------------------
 
-    private async Task<TokensDto> RegisterAndLogin(
+    private record CookieTokens(string AccessToken, string RefreshToken);
+
+    private async Task<CookieTokens> RegisterAndLogin(
         string? email = null, string? password = null)
     {
         email ??= FakerExtensions.RandomEmail();
@@ -180,6 +184,8 @@ public sealed class TokenTests : IAsyncLifetime
         var loginResponse = await _client.PostJsonAsync("/api/auth/login",
             new LoginUserCommand(email, password));
 
-        return await loginResponse.ReadAsAsync<TokensDto>();
+        return new CookieTokens(
+            loginResponse.GetCookieValue("accessToken")!,
+            loginResponse.GetCookieValue("refreshToken")!);
     }
 }

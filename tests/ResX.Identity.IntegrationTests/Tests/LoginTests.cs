@@ -1,8 +1,8 @@
 using System.Net;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using ResX.Identity.Application.Commands.LoginUser;
 using ResX.Identity.Application.Commands.RegisterUser;
-using ResX.Identity.Application.DTOs;
 using ResX.Identity.IntegrationTests.Collections;
 using ResX.Identity.IntegrationTests.Fixtures;
 using ResX.IntegrationTests.Common.Helpers;
@@ -19,7 +19,10 @@ public sealed class LoginTests : IAsyncLifetime
     public LoginTests(IdentityWebAppFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
     }
 
     public Task InitializeAsync() => _factory.ResetDatabaseAsync();
@@ -30,7 +33,7 @@ public sealed class LoginTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task Login_WithCorrectCredentials_Returns200WithTokens()
+    public async Task Login_WithCorrectCredentials_Returns204WithCookies()
     {
         // Arrange — create a user first
         var email = FakerExtensions.RandomEmail();
@@ -42,12 +45,12 @@ public sealed class LoginTests : IAsyncLifetime
             new LoginUserCommand(email, password));
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var tokens = await response.ReadAsAsync<TokensDto>();
-        tokens.AccessToken.Should().NotBeNullOrWhiteSpace();
-        tokens.RefreshToken.Should().NotBeNullOrWhiteSpace();
-        tokens.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
+        var accessToken = response.GetCookieValue("accessToken");
+        var refreshToken = response.GetCookieValue("refreshToken");
+        accessToken.Should().NotBeNullOrWhiteSpace();
+        refreshToken.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -59,13 +62,14 @@ public sealed class LoginTests : IAsyncLifetime
 
         var response = await _client.PostJsonAsync("/api/auth/login",
             new LoginUserCommand(email, password));
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var tokens = await response.ReadAsAsync<TokensDto>();
-        tokens.AccessToken.Should().NotBeNullOrWhiteSpace();
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var accessToken = response.GetCookieValue("accessToken");
+        accessToken.Should().NotBeNullOrWhiteSpace();
 
         // The token should be a valid JWT we can parse
         var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(tokens.AccessToken);
+        var jwt = handler.ReadJwtToken(accessToken);
 
         jwt.Claims.Should().Contain(c => c.Type == "email" || c.Value == email.ToLowerInvariant());
     }
@@ -121,12 +125,11 @@ public sealed class LoginTests : IAsyncLifetime
     // Helpers
     // -------------------------------------------------------------------------
 
-    private async Task<TokensDto> RegisterUser(string email, string password)
+    private async Task RegisterUser(string email, string password)
     {
-        var response = await _client.PostJsonAsync("/api/auth/register",
+        await _client.PostJsonAsync("/api/auth/register",
             new RegisterUserCommand(email, null, password,
                 FakerExtensions.RandomFirstName(),
                 FakerExtensions.RandomLastName()));
-        return await response.ReadAsAsync<TokensDto>();
     }
 }
