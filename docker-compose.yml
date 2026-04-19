@@ -105,6 +105,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__IdentityDb: "Host=postgres;Port=5432;Database=resx_identity;Username=postgres;Password=postgres"
+      ConnectionStrings__Redis: "redis:6379,password=redis_password"
       Jwt__SecretKey: "change-this-super-secret-key-in-production-must-be-at-least-32-chars"
       Jwt__Issuer: "ResX.Identity"
       Jwt__Audience: "ResX"
@@ -118,6 +119,8 @@ services:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "5001:8080"
@@ -143,7 +146,7 @@ services:
       EventBus__VirtualHost: resx
       EventBus__UserName: guest
       EventBus__Password: guest
-      Redis__ConnectionString: "redis:6379,password=redis_password"
+      ConnectionStrings__Redis: "redis:6379,password=redis_password"
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,7 +178,7 @@ services:
       EventBus__VirtualHost: resx
       EventBus__UserName: guest
       EventBus__Password: guest
-      Redis__ConnectionString: "redis:6379,password=redis_password"
+      ConnectionStrings__Redis: "redis:6379,password=redis_password"
     depends_on:
       postgres:
         condition: service_healthy
@@ -236,7 +239,7 @@ services:
       EventBus__VirtualHost: resx
       EventBus__UserName: guest
       EventBus__Password: guest
-      Redis__ConnectionString: "redis:6379,password=redis_password"
+      ConnectionStrings__Redis: "redis:6379,password=redis_password"
     depends_on:
       postgres:
         condition: service_healthy

@@ -58,7 +58,7 @@ spec:
                 secretKeyRef:
                   name: resx-secrets
                   key: rabbitmq-password
-            - name: Redis__ConnectionString
+            - name: ConnectionStrings__Redis
               value: "redis:6379,password=$(REDIS_PASSWORD)"
             - name: REDIS_PASSWORD
               valueFrom:
@@ -168,7 +168,7 @@ spec:
                 secretKeyRef:
                   name: resx-secrets
                   key: rabbitmq-password
-            - name: Redis__ConnectionString
+            - name: ConnectionStrings__Redis
               value: "redis:6379,password=$(REDIS_PASSWORD)"
             - name: REDIS_PASSWORD
               valueFrom:
@@ -377,7 +377,7 @@ spec:
                 secretKeyRef:
                   name: resx-secrets
                   key: rabbitmq-password
-            - name: Redis__ConnectionString
+            - name: ConnectionStrings__Redis
               value: "redis:6379,password=$(REDIS_PASSWORD)"
             - name: REDIS_PASSWORD
               valueFrom:
