@@ -20,8 +20,8 @@ data:
   POSTGRES_PORT: "5432"
   POSTGRES_USER: "postgres"
 
-  S3_SERVICE_URL: "https://storage.yandexcloud.net"
-  S3_REGION: "ru-central1"
+  S3_SERVICE_URL: "http://minio:9000"
+  S3_REGION: "us-east-1"
   S3_BUCKET: "resx-files"
 
   ASPNETCORE_ENVIRONMENT: "Production"

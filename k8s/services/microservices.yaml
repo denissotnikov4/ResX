@@ -175,6 +175,8 @@ spec:
                 secretKeyRef:
                   name: resx-secrets
                   key: redis-password
+            - name: Services__Users__GrpcUrl
+              value: "http://users-service:8080"
           resources:
             requests:
               memory: "128Mi"
@@ -690,9 +692,9 @@ spec:
             - name: Jwt__Audience
               value: ResX
             - name: S3__ServiceUrl
-              value: "https://storage.yandexcloud.net"
+              value: "http://minio:9000"
             - name: S3__Region
-              value: ru-central1
+              value: us-east-1
             - name: S3__BucketName
               value: resx-files
             - name: S3__AccessKey

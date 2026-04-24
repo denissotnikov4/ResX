@@ -134,7 +134,7 @@ ResX.<Service>.API             ← ASP.NET Core Controllers, Program.cs
 | Real-time         | SignalR (WebSocket, Long Polling fallback)           |
 | RPC               | gRPC (Google.Protobuf, Grpc.AspNetCore)             |
 | Кэширование       | Redis (StackExchange.Redis)                         |
-| Объектное хранилище| S3 (AWSSDK.S3 — Yandex Object Storage / MinIO)    |
+| Объектное хранилище| S3 (AWSSDK.S3 — MinIO, self-hosted)                |
 | Аутентификация    | JWT Bearer (Microsoft.AspNetCore.Authentication)    |
 | API-документация  | Swagger / OpenAPI (Swashbuckle)                     |
 | Health Checks     | ASP.NET Core HealthChecks + Npgsql                  |
@@ -330,7 +330,7 @@ kubectl -n resx scale deployment identity-service --replicas=3
 | `S3__AccessKey`  | Access key S3                         | `minioadmin`           |
 | `S3__SecretKey`  | Secret key S3                         | —                      |
 | `S3__BucketName` | Имя bucket S3                         | `resx-files`           |
-| `S3__Region`     | Регион AWS (Yandex: `ru-central1`)    | `us-east-1`            |
+| `S3__Region`     | Регион S3-клиента (MinIO игнорирует)  | `us-east-1`            |
 
 ### Только Analytics Service
 

@@ -6,6 +6,7 @@ package users;
 
 service UsersService {
   rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc GetUserProfilesBatch(GetUserProfilesBatchRequest) returns (GetUserProfilesBatchResponse);
   rpc UpdateEcoStats(UpdateEcoStatsRequest) returns (UpdateEcoStatsResponse);
 }
 
@@ -29,6 +30,23 @@ message EcoStatsProto {
   int32 items_received = 2;
   double co2_saved_kg = 3;
   double waste_saved_kg = 4;
+}
+
+message GetUserProfilesBatchRequest {
+  repeated string user_ids = 1;
+}
+
+message UserProfileBrief {
+  string user_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string avatar_url = 4;
+  double rating = 5;
+  int32 review_count = 6;
+}
+
+message GetUserProfilesBatchResponse {
+  repeated UserProfileBrief profiles = 1;
 }
 
 message UpdateEcoStatsRequest {

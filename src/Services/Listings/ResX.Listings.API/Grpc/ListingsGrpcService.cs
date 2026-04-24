@@ -33,7 +33,7 @@ public class ListingsGrpcService : ListingsService.ListingsServiceBase
             {
                 ListingId = listing.Id.ToString(),
                 Title = listing.Title,
-                DonorId = listing.DonorId.ToString(),
+                DonorId = listing.Donor.Id.ToString(),
                 Status = listing.Status,
                 TransferType = listing.TransferType,
                 CategoryName = listing.Category.Name

@@ -34,6 +34,7 @@ public class GetMyListingsQueryHandler : IRequestHandler<GetMyListingsQuery, Pag
             listing.Status.ToString(),
             listing.Location.City,
             listing.Photos.OrderBy(p => p.DisplayOrder).FirstOrDefault()?.Url,
+            Donor: null,
             listing.ViewCount,
             listing.CreatedAt)).ToList().AsReadOnly();
 

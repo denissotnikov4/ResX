@@ -8,6 +8,10 @@ public interface IUserProfileRepository
 {
     Task<UserProfile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<UserProfile>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(UserProfile userProfile, CancellationToken cancellationToken = default);
 
     Task<PagedList<Review>> GetReviewsAsync(

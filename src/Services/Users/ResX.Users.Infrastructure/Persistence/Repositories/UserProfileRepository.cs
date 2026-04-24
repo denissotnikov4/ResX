@@ -22,6 +22,18 @@ public class UserProfileRepository : IUserProfileRepository
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<UserProfile>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return Array.Empty<UserProfile>();
+
+        return await _context.UserProfiles
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task AddAsync(UserProfile userProfile, CancellationToken cancellationToken = default)
     {
         _context.UserProfiles.Add(userProfile);

@@ -1,4 +1,3 @@
-using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
@@ -7,15 +6,15 @@ using ResX.Storage.S3.Abstractions;
 
 namespace ResX.Storage.S3;
 
-public class YandexS3StorageService : IStorageService
+public class S3StorageService : IStorageService
 {
     private readonly IAmazonS3 _s3Client;
     private readonly string _bucketName;
-    private readonly ILogger<YandexS3StorageService> _logger;
+    private readonly ILogger<S3StorageService> _logger;
 
-    public YandexS3StorageService(
+    public S3StorageService(
         IOptions<S3Options> options,
-        ILogger<YandexS3StorageService> logger)
+        ILogger<S3StorageService> logger)
     {
         _logger = logger;
         var opts = options.Value;

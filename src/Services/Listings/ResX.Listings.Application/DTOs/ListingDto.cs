@@ -1,4 +1,4 @@
-﻿namespace ResX.Listings.Application.DTOs;
+namespace ResX.Listings.Application.DTOs;
 
 public record ListingDto(
     Guid Id,
@@ -10,7 +10,7 @@ public record ListingDto(
     string TransferMethod,
     string Status,
     LocationDto Location,
-    Guid DonorId,
+    DonorDto Donor,
     IReadOnlyList<ListingPhotoDto> Photos,
     IReadOnlyList<string> Tags,
     int ViewCount,

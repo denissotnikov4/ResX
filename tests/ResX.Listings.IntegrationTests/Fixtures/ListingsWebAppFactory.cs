@@ -10,6 +10,8 @@ using ResX.EventBus.RabbitMQ;
 using ResX.EventBus.RabbitMQ.Abstractions;
 using ResX.IntegrationTests.Common.Fixtures;
 using ResX.IntegrationTests.Common.Helpers;
+using ResX.Listings.Application.DTOs;
+using ResX.Listings.Application.Services;
 using StackExchange.Redis;
 using Xunit;
 
@@ -41,6 +43,7 @@ public sealed class ListingsWebAppFactory : WebApplicationFactory<Program>, IAsy
                 ["RabbitMQ:HostName"] = "localhost",
                 ["RabbitMQ:UserName"] = "guest",
                 ["RabbitMQ:Password"] = "guest",
+                ["Services:Users:GrpcUrl"] = "http://localhost:0",
             });
         });
 
@@ -54,6 +57,19 @@ public sealed class ListingsWebAppFactory : WebApplicationFactory<Program>, IAsy
             services.RemoveAll<RabbitMQConnection>();
             services.RemoveAll<IEventBus>();
             services.AddSingleton(Substitute.For<IEventBus>());
+
+            services.RemoveAll<IUsersClient>();
+            var usersClient = Substitute.For<IUsersClient>();
+            usersClient.GetDonorsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo =>
+                {
+                    var ids = callInfo.Arg<IReadOnlyCollection<Guid>>();
+                    IReadOnlyDictionary<Guid, DonorDto> donors = ids.ToDictionary(
+                        id => id,
+                        id => new DonorDto(id, "Test", "Donor", null, 0m, 0));
+                    return Task.FromResult(donors);
+                });
+            services.AddSingleton(usersClient);
         });
     }
 

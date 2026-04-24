@@ -26,7 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.Configure<S3Options>(configuration.GetSection(S3Options.SectionName));
-        services.AddSingleton<IStorageService, YandexS3StorageService>();
+        services.AddSingleton<IStorageService, S3StorageService>();
 
         services.AddFluentMigratorCore()
             .ConfigureRunner(runner => runner

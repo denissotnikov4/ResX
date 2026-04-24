@@ -1,0 +1,336 @@
+<mxfile compressed="false">
+  <diagram name="ResX Microservices" id="resx-arch">
+    <mxGraphModel dx="1600" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  CLIENTS                                                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="WEB"
+          value="&lt;b&gt;Web / Mobile&lt;/b&gt;&lt;br&gt;React  :3000 / :5173"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6B7280;strokeColor=#374151;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="1">
+          <mxGeometry x="600" y="40" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  API GATEWAY                                               -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="GW"
+          value="&lt;b&gt;API Gateway - YARP  :8080&lt;/b&gt;&lt;br&gt;JWT Validation, Rate Limit 200 req/min, CORS"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#B45309;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="1">
+          <mxGeometry x="305" y="155" width="820" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  AUTH subgraph                                             -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="AUTH" value="Auth"
+          style="swimlane;startSize=25;fillColor=#ffffff;strokeColor=#555555;fontColor=#333333;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1">
+          <mxGeometry x="20" y="278" width="165" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="IDENTITY"
+          value="&lt;b&gt;Identity&lt;/b&gt;&lt;br&gt;:5001"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="AUTH">
+          <mxGeometry x="22" y="30" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  CORE subgraph                                             -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="CORE" value="Core"
+          style="swimlane;startSize=25;fillColor=#ffffff;strokeColor=#555555;fontColor=#333333;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1">
+          <mxGeometry x="205" y="278" width="535" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="USERS"
+          value="&lt;b&gt;Users&lt;/b&gt;&lt;br&gt;:5002"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="CORE">
+          <mxGeometry x="15" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="LISTINGS"
+          value="&lt;b&gt;Listings&lt;/b&gt;&lt;br&gt;:5003"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="CORE">
+          <mxGeometry x="140" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="TRANSACTIONS"
+          value="&lt;b&gt;Transactions&lt;/b&gt;&lt;br&gt;:5004"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="CORE">
+          <mxGeometry x="265" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="DISPUTES"
+          value="&lt;b&gt;Disputes&lt;/b&gt;&lt;br&gt;:5008"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="CORE">
+          <mxGeometry x="390" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  SUPPORT subgraph                                          -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="SUPPORT" value="Support"
+          style="swimlane;startSize=25;fillColor=#ffffff;strokeColor=#555555;fontColor=#333333;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1">
+          <mxGeometry x="760" y="273" width="660" height="115" as="geometry" />
+        </mxCell>
+        <!-- Messaging — 3 строки, выше остальных -->
+        <mxCell id="MESSAGING"
+          value="&lt;b&gt;Messaging&lt;/b&gt;&lt;br&gt;:5005&lt;br&gt;SignalR /hubs/chat"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=10;"
+          vertex="1" parent="SUPPORT">
+          <mxGeometry x="12" y="24" width="110" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="NOTIFICATIONS"
+          value="&lt;b&gt;Notifications&lt;/b&gt;&lt;br&gt;:5006"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="SUPPORT">
+          <mxGeometry x="137" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="FILES"
+          value="&lt;b&gt;Files&lt;/b&gt;&lt;br&gt;:5009"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="SUPPORT">
+          <mxGeometry x="262" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="CHARITY"
+          value="&lt;b&gt;Charity&lt;/b&gt;&lt;br&gt;:5007"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="SUPPORT">
+          <mxGeometry x="387" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ANALYTICS"
+          value="&lt;b&gt;Analytics&lt;/b&gt;&lt;br&gt;:5010"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="SUPPORT">
+          <mxGeometry x="512" y="30" width="110" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  INFRA subgraph                                            -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="INFRA" value="Infrastructure"
+          style="swimlane;startSize=30;fillColor=#ffffff;strokeColor=#555555;fontColor=#333333;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1">
+          <mxGeometry x="20" y="455" width="1400" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- PostgreSQL — cylinder, green — [(..)] -->
+        <mxCell id="PG"
+          value="&lt;b&gt;PostgreSQL  :5432&lt;/b&gt;&lt;br&gt;resx_identity, resx_users&lt;br&gt;resx_listings, resx_transactions&lt;br&gt;resx_messaging, resx_notifications&lt;br&gt;resx_charity, resx_disputes&lt;br&gt;resx_files"
+          style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#10B981;strokeColor=#065F46;fontColor=#ffffff;fontSize=10;"
+          vertex="1" parent="INFRA">
+          <mxGeometry x="20" y="30" width="235" height="135" as="geometry" />
+        </mxCell>
+
+        <!-- Redis — cylinder, red — [(..)] -->
+        <mxCell id="REDIS"
+          value="&lt;b&gt;Redis  :6379&lt;/b&gt;&lt;br&gt;Sessions, JWT blacklist&lt;br&gt;Cache TTL = 60 min"
+          style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#EF4444;strokeColor=#991B1B;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="INFRA">
+          <mxGeometry x="290" y="38" width="190" height="108" as="geometry" />
+        </mxCell>
+
+        <!-- RabbitMQ — hexagon, purple — {{..}} -->
+        <mxCell id="MQ"
+          value="&lt;b&gt;RabbitMQ  :5672&lt;/b&gt;&lt;br&gt;Exchange: resx_event_bus  (Direct)&lt;br&gt;Mgmt UI: :15672"
+          style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;size=20;fillColor=#8B5CF6;strokeColor=#4C1D95;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="INFRA">
+          <mxGeometry x="520" y="33" width="250" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- MinIO / S3 — cylinder, cyan — [(..)] -->
+        <mxCell id="S3"
+          value="&lt;b&gt;MinIO&lt;/b&gt;&lt;br&gt;:9000 API / :9001 Console&lt;br&gt;Bucket: resx-files"
+          style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#06B6D4;strokeColor=#0E7490;fontColor=#ffffff;fontSize=11;"
+          vertex="1" parent="INFRA">
+          <mxGeometry x="815" y="38" width="190" height="108" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  WEB -- "HTTPS REST" --> GW                                -->
+        <!--  WEB <-- "WebSocket SignalR" --> GW                        -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e01" value="HTTPS REST"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;endArrow=block;endFill=1;startArrow=none;exitX=0.35;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;"
+          edge="1" source="WEB" target="GW" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e02" value="WebSocket  SignalR"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;endArrow=block;endFill=1;startArrow=block;startFill=1;exitX=0.65;exitY=1;exitDx=0;exitDy=0;entryX=0.65;entryY=0;entryDx=0;entryDy=0;"
+          edge="1" source="WEB" target="GW" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  GW -- "HTTP .." --> services                              -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e03" value="HTTP  /api/auth"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="IDENTITY" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e04" value="HTTP  /api/users"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="USERS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e05" value="HTTP  /api/listings"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="LISTINGS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e06" value="HTTP  /api/transactions"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="TRANSACTIONS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e07" value="HTTP  /api/disputes"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="DISPUTES" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- GW <-- "HTTP /api/conversations\nWS /hubs/chat" --> MESSAGING  (bidirectional) -->
+        <mxCell id="e08" value="HTTP  /api/conversations&#xa;WS  /hubs/chat"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=block;startFill=1;"
+          edge="1" source="GW" target="MESSAGING" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e09" value="HTTP  /api/notifications"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="NOTIFICATIONS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="HTTP  /api/files"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="FILES" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="HTTP  /api/charity"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="CHARITY" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="HTTP  /api/analytics"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="GW" target="ANALYTICS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  gRPC  -. "..." .->  (dashed, open arrow)                 -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e13" value="gRPC  ReserveListing&#xa;CompleteListing"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;dashPattern=8 4;endArrow=open;endFill=0;startArrow=none;fontSize=9;"
+          edge="1" source="TRANSACTIONS" target="LISTINGS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="gRPC  UpdateEcoStats"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;dashPattern=8 4;endArrow=open;endFill=0;startArrow=none;fontSize=9;"
+          edge="1" source="TRANSACTIONS" target="USERS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="gRPC  GetListingById"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;dashPattern=8 4;endArrow=open;endFill=0;startArrow=none;fontSize=9;"
+          edge="1" source="DISPUTES" target="LISTINGS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="gRPC  GetUserProfile"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;dashPattern=8 4;endArrow=open;endFill=0;startArrow=none;fontSize=9;"
+          edge="1" source="DISPUTES" target="USERS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  RabbitMQ Publish  -- "..." -->                           -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e17" value="UserRegistered"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="IDENTITY" target="MQ" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="ListingCreated&#xa;ListingStatusChanged"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="LISTINGS" target="MQ" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="TxCreated&#xa;TxCompleted&#xa;TxCancelled"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="TRANSACTIONS" target="MQ" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" value="MessageSent"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="MESSAGING" target="MQ" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  RabbitMQ Subscribe  -- "..." -->                         -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e21" value="UserRegistered&#xa;TxCreated / TxCompleted"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="MQ" target="USERS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" value="UserRegistered, ListingCreated&#xa;TxCreated / TxCompleted&#xa;MessageSent"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="MQ" target="NOTIFICATIONS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="ListingCreated"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="MQ" target="ANALYTICS" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  PostgreSQL  ---  (plain line, NO arrowhead)              -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="pg1"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="IDENTITY"      target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg2"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="USERS"         target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg3"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="LISTINGS"      target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg4"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="TRANSACTIONS"  target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg5"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="MESSAGING"     target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg6"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="NOTIFICATIONS" target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg7"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="CHARITY"       target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg8"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="DISPUTES"      target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pg9"  style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="FILES"         target="PG" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  Redis  ---  (plain line, NO arrowhead)                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="rd1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="IDENTITY"  target="REDIS" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rd2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="USERS"     target="REDIS" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rd3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="LISTINGS"  target="REDIS" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rd4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;" edge="1" source="MESSAGING" target="REDIS" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  MinIO / S3  -- "S3 put/get/delete" -->                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e_s3" value="S3 put / get / delete"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;endArrow=block;endFill=1;startArrow=none;"
+          edge="1" source="FILES" target="S3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  Analytics -. "read-only ..." .-> PG  (dashed, open)     -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e_anpg" value="read-only&#xa;resx_users, resx_listings&#xa;resx_transactions"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;dashPattern=8 4;endArrow=open;endFill=0;startArrow=none;fontSize=9;"
+          edge="1" source="ANALYTICS" target="PG" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

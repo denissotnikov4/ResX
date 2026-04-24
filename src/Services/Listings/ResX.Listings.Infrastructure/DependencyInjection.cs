@@ -8,10 +8,13 @@ using ResX.EventBus.RabbitMQ;
 using ResX.EventBus.RabbitMQ.Abstractions;
 using ResX.Common.Persistence;
 using ResX.Listings.Application.Repositories;
+using ResX.Listings.Application.Services;
+using ResX.Listings.Infrastructure.Grpc;
 using ResX.Listings.Infrastructure.Migrations;
 using ResX.Listings.Infrastructure.Persistence;
 using ResX.Listings.Infrastructure.Persistence.Repositories;
 using ResX.Listings.Infrastructure.Persistence.UnitOfWork;
+using ResX.Users.API.Grpc;
 using StackExchange.Redis;
 
 namespace ResX.Listings.Infrastructure;
@@ -46,6 +49,14 @@ public static class DependencyInjection
         services.Configure<EventBusOptions>(configuration.GetSection(EventBusOptions.SectionName));
         services.AddSingleton<RabbitMQConnection>();
         services.AddSingleton<IEventBus, RabbitMQEventBus>();
+
+        var usersGrpcUrl = configuration["Services:Users:GrpcUrl"]
+            ?? throw new InvalidOperationException("Services:Users:GrpcUrl is not configured.");
+        services.AddGrpcClient<UsersService.UsersServiceClient>(o =>
+        {
+            o.Address = new Uri(usersGrpcUrl);
+        });
+        services.AddScoped<IUsersClient, UsersGrpcClient>();
 
         return services;
     }

@@ -2,6 +2,7 @@ using Grpc.Core;
 using MediatR;
 using ResX.Users.Application.Commands.UpdateEcoStats;
 using ResX.Users.Application.Queries.GetUserProfile;
+using ResX.Users.Application.Queries.GetUserProfilesBatch;
 
 namespace ResX.Users.API.Grpc;
 
@@ -42,6 +43,38 @@ public class UsersGrpcService : UsersService.UsersServiceBase
                 WasteSavedKg = (double)profile.EcoStats.WasteSavedKg
             }
         };
+    }
+
+    public override async Task<GetUserProfilesBatchResponse> GetUserProfilesBatch(
+        GetUserProfilesBatchRequest request,
+        ServerCallContext context)
+    {
+        var ids = new List<Guid>(request.UserIds.Count);
+        foreach (var raw in request.UserIds)
+        {
+            if (Guid.TryParse(raw, out var id))
+                ids.Add(id);
+        }
+
+        var profiles = await _mediator.Send(
+            new GetUserProfilesBatchQuery(ids),
+            context.CancellationToken);
+
+        var response = new GetUserProfilesBatchResponse();
+        foreach (var p in profiles)
+        {
+            response.Profiles.Add(new UserProfileBrief
+            {
+                UserId = p.Id.ToString(),
+                FirstName = p.FirstName,
+                LastName = p.LastName,
+                AvatarUrl = p.AvatarUrl ?? "",
+                Rating = (double)p.Rating,
+                ReviewCount = p.ReviewCount
+            });
+        }
+
+        return response;
     }
 
     public override async Task<UpdateEcoStatsResponse> UpdateEcoStats(
