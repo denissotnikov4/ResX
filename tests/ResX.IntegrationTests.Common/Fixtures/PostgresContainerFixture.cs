@@ -32,17 +32,27 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
     /// Must be called after the first WebApplicationFactory startup (which runs migrations).
     /// Subsequent calls to ResetAsync will delete all test data while keeping the schema.
     /// </summary>
-    public async Task InitializeRespawnerAsync(string[] schemasToInclude)
+    public async Task InitializeRespawnerAsync(string[] schemasToInclude, string[]? additionalTablesToIgnore = null)
     {
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
+
+        var tablesToIgnore = new List<Respawn.Graph.Table>
+        {
+            // Never delete FluentMigrator version tracking
+            new("VersionInfo")
+        };
+
+        if (additionalTablesToIgnore is not null)
+        {
+            tablesToIgnore.AddRange(additionalTablesToIgnore.Select(t => new Respawn.Graph.Table(t)));
+        }
 
         _respawner = await Respawner.CreateAsync(conn, new RespawnerOptions
         {
             DbAdapter = DbAdapter.Postgres,
             SchemasToInclude = schemasToInclude,
-            // Never delete FluentMigrator version tracking
-            TablesToIgnore = [new Respawn.Graph.Table("VersionInfo")]
+            TablesToIgnore = tablesToIgnore.ToArray()
         });
     }
 

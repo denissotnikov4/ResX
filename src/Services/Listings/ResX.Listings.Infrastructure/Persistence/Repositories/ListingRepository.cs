@@ -32,12 +32,16 @@ public class ListingRepository : IListingRepository
     {
         var query = _context.Listings
             .Include(l => l.Photos)
-            .Where(l => l.Status == ListingStatus.Active)
             .AsQueryable();
+
+        if (!filter.IncludeAllStatuses)
+        {
+            query = query.Where(l => l.Status == ListingStatus.Active);
+        }
 
         if (filter.CategoryId.HasValue)
         {
-            query = query.Where(l => l.Category.Id == filter.CategoryId.Value);
+            query = query.Where(l => l.CategoryId == filter.CategoryId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Condition) &&

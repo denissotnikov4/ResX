@@ -159,12 +159,12 @@ public sealed class CreateListingTests : IAsyncLifetime
     private string GenerateToken() =>
         JwtTokenHelper.GenerateAccessToken(_userId, "user@test.com");
 
+    private static readonly Guid SeededFurnitureCategoryId = Guid.Parse("11111111-1111-1111-1111-111111111103");
+
     private static CreateListingDto ValidCreateListingDto() => new(
         Title: FakerExtensions.RandomTitle(),
         Description: FakerExtensions.RandomDescription(),
-        CategoryId: Guid.NewGuid(),
-        CategoryName: "Мебель",
-        ParentCategoryId: null,
+        CategoryId: SeededFurnitureCategoryId,
         Condition: ItemCondition.Good,
         TransferType: TransferType.Gift,
         TransferMethod: TransferMethod.InPerson,

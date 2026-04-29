@@ -11,15 +11,18 @@ namespace ResX.Listings.Application.Queries.GetListings;
 public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedList<ListingPreviewDto>>
 {
     private readonly IListingRepository _listingRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IUsersClient _usersClient;
     private readonly ICacheService _cache;
 
     public GetListingsQueryHandler(
         IListingRepository listingRepository,
+        ICategoryRepository categoryRepository,
         IUsersClient usersClient,
         ICacheService cache)
     {
         _listingRepository = listingRepository;
+        _categoryRepository = categoryRepository;
         _usersClient = usersClient;
         _cache = cache;
     }
@@ -48,7 +51,7 @@ public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedLi
             var previews = pagedListings.Items.Select(listing => new CachedListingPreview(
                 listing.Id,
                 listing.Title,
-                new CategoryDto(listing.Category.Id, listing.Category.Name, listing.Category.ParentCategoryId),
+                listing.CategoryId,
                 listing.Condition.ToString(),
                 listing.TransferType.ToString(),
                 listing.Status.ToString(),
@@ -66,21 +69,35 @@ public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedLi
         }, expiry: TimeSpan.FromMinutes(5), cancellationToken);
 
         var donorIds = cachedPage.Items.Select(i => i.DonorId).Distinct().ToList();
-        var donors = await _usersClient.GetDonorsAsync(donorIds, cancellationToken);
+        var categoryIds = cachedPage.Items.Select(i => i.CategoryId).Distinct().ToList();
+
+        var donorsTask = _usersClient.GetDonorsAsync(donorIds, cancellationToken);
+        var categoriesTask = _categoryRepository.GetByIdsAsync(categoryIds, cancellationToken);
+        await Task.WhenAll(donorsTask, categoriesTask);
+
+        var donors = donorsTask.Result;
+        var categories = categoriesTask.Result.ToDictionary(c => c.Id);
 
         var listingPreviewDtos = cachedPage.Items
-            .Select(i => new ListingPreviewDto(
-                i.Id,
-                i.Title,
-                i.Category,
-                i.Condition,
-                i.TransferType,
-                i.Status,
-                i.City,
-                i.ThumbnailUrl,
-                donors.TryGetValue(i.DonorId, out var donor) ? donor : null,
-                i.ViewCount,
-                i.CreatedAt))
+            .Select(i =>
+            {
+                var category = categories.TryGetValue(i.CategoryId, out var c)
+                    ? new CategoryDto(c.Id, c.Name, c.ParentCategoryId)
+                    : new CategoryDto(i.CategoryId, "(deleted)", null);
+
+                return new ListingPreviewDto(
+                    i.Id,
+                    i.Title,
+                    category,
+                    i.Condition,
+                    i.TransferType,
+                    i.Status,
+                    i.City,
+                    i.ThumbnailUrl,
+                    donors.TryGetValue(i.DonorId, out var donor) ? donor : null,
+                    i.ViewCount,
+                    i.CreatedAt);
+            })
             .ToList()
             .AsReadOnly();
 
@@ -94,7 +111,7 @@ public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedLi
     private record CachedListingPreview(
         Guid Id,
         string Title,
-        CategoryDto Category,
+        Guid CategoryId,
         string Condition,
         string TransferType,
         string Status,

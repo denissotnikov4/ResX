@@ -21,7 +21,7 @@ public class Listing : AggregateRoot<Guid>
 
     public string Description { get; private set; } = string.Empty;
 
-    public Category Category { get; private set; } = null!;
+    public Guid CategoryId { get; private set; }
 
     public ItemCondition Condition { get; private set; }
 
@@ -48,7 +48,7 @@ public class Listing : AggregateRoot<Guid>
     public static Listing Create(
         string title,
         string description,
-        Category category,
+        Guid categoryId,
         ItemCondition condition,
         TransferType transferType,
         TransferMethod transferMethod,
@@ -66,6 +66,11 @@ public class Listing : AggregateRoot<Guid>
             throw new DomainException("Description cannot be empty.");
         }
 
+        if (categoryId == Guid.Empty)
+        {
+            throw new DomainException("Category ID cannot be empty.");
+        }
+
         if (donorId == Guid.Empty)
         {
             throw new DomainException("Donor ID cannot be empty.");
@@ -76,7 +81,7 @@ public class Listing : AggregateRoot<Guid>
             Id = Guid.NewGuid(),
             Title = title,
             Description = description,
-            Category = category,
+            CategoryId = categoryId,
             Condition = condition,
             TransferType = transferType,
             TransferMethod = transferMethod,
@@ -92,7 +97,7 @@ public class Listing : AggregateRoot<Guid>
             listing._tags.AddRange(tags.Where(t => !string.IsNullOrWhiteSpace(t)));
         }
 
-        listing.RaiseDomainEvent(new ListingCreatedDomainEvent(listing.Id, listing.DonorId, listing.Category.Name));
+        listing.RaiseDomainEvent(new ListingCreatedDomainEvent(listing.Id, listing.DonorId, listing.CategoryId));
 
         return listing;
     }
@@ -100,7 +105,7 @@ public class Listing : AggregateRoot<Guid>
     public void Update(
         string title,
         string description,
-        Category category,
+        Guid categoryId,
         ItemCondition condition,
         TransferType transferType,
         TransferMethod transferMethod,
@@ -112,9 +117,14 @@ public class Listing : AggregateRoot<Guid>
             throw new DomainException("Cannot update a completed or cancelled listing.");
         }
 
+        if (categoryId == Guid.Empty)
+        {
+            throw new DomainException("Category ID cannot be empty.");
+        }
+
         Title = title;
         Description = description;
-        Category = category;
+        CategoryId = categoryId;
         Condition = condition;
         TransferType = transferType;
         TransferMethod = transferMethod;

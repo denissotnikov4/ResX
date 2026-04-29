@@ -178,9 +178,7 @@ public sealed class ListingLifecycleTests : IAsyncLifetime
     private static CreateListingDto ValidDto() => new(
         Title: FakerExtensions.RandomTitle(),
         Description: FakerExtensions.RandomDescription(),
-        CategoryId: Guid.NewGuid(),
-        CategoryName: "Электроника",
-        ParentCategoryId: null,
+        CategoryId: Guid.Parse("11111111-1111-1111-1111-111111111102"),
         Condition: ItemCondition.LikeNew,
         TransferType: TransferType.Gift,
         TransferMethod: TransferMethod.Both,

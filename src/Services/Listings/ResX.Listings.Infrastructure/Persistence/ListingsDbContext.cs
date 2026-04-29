@@ -14,6 +14,10 @@ public class ListingsDbContext : DbContext
 
     public DbSet<ListingPhoto> ListingPhotos => Set<ListingPhoto>();
 
+    public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<CategoryHistory> CategoryHistories => Set<CategoryHistory>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -11,14 +11,17 @@ namespace ResX.Listings.Application.Queries.GetListingById;
 public class GetListingByIdQueryHandler : IRequestHandler<GetListingByIdQuery, ListingDto>
 {
     private readonly IListingRepository _listingRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IUsersClient _usersClient;
 
     public GetListingByIdQueryHandler(
         IListingRepository listingRepository,
+        ICategoryRepository categoryRepository,
         IUsersClient usersClient,
         ILogger<GetListingByIdQueryHandler> logger)
     {
         _listingRepository = listingRepository;
+        _categoryRepository = categoryRepository;
         _usersClient = usersClient;
     }
 
@@ -29,15 +32,25 @@ public class GetListingByIdQueryHandler : IRequestHandler<GetListingByIdQuery, L
 
         await _listingRepository.IncrementViewCountAsync(listing.Id, cancellationToken);
 
-        var donors = await _usersClient.GetDonorsAsync(new[] { listing.DonorId }, cancellationToken);
+        var donorsTask = _usersClient.GetDonorsAsync(new[] { listing.DonorId }, cancellationToken);
+        var categoryTask = _categoryRepository.GetByIdAsync(listing.CategoryId, cancellationToken);
+        await Task.WhenAll(donorsTask, categoryTask);
+
+        var donors = donorsTask.Result;
+        var category = categoryTask.Result;
+
         if (!donors.TryGetValue(listing.DonorId, out var donor))
             throw new NotFoundException("Donor", listing.DonorId);
+
+        var categoryDto = category is null
+            ? new CategoryDto(listing.CategoryId, "(deleted)", null)
+            : new CategoryDto(category.Id, category.Name, category.ParentCategoryId);
 
         return new ListingDto(
             listing.Id,
             listing.Title,
             listing.Description,
-            new CategoryDto(listing.Category.Id, listing.Category.Name, listing.Category.ParentCategoryId),
+            categoryDto,
             listing.Condition.ToString(),
             listing.TransferType.ToString(),
             listing.TransferMethod.ToString(),

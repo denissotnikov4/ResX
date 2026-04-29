@@ -4,7 +4,7 @@ using ResX.Listings.Application.Repositories;
 
 namespace ResX.Listings.Application.Queries.GetCategories;
 
-public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, IReadOnlyList<CategoryResultDto>>
+public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, IReadOnlyList<CategoryDetailsDto>>
 {
     private readonly ICategoryRepository _categoryRepository;
 
@@ -13,6 +13,21 @@ public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, IRe
         _categoryRepository = categoryRepository;
     }
 
-    public Task<IReadOnlyList<CategoryResultDto>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
-        => _categoryRepository.GetAllActiveAsync(cancellationToken);
+    public async Task<IReadOnlyList<CategoryDetailsDto>> Handle(
+        GetCategoriesQuery request,
+        CancellationToken cancellationToken)
+    {
+        var categories = await _categoryRepository.GetAllActiveAsync(cancellationToken);
+
+        return categories.Select(c => new CategoryDetailsDto(
+            c.Id,
+            c.Name,
+            c.Description,
+            c.ParentCategoryId,
+            c.IconUrl,
+            c.IsActive,
+            c.DisplayOrder,
+            c.CreatedAt,
+            c.UpdatedAt)).ToList();
+    }
 }

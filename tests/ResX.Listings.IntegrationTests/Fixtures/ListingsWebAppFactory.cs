@@ -84,7 +84,8 @@ public sealed class ListingsWebAppFactory : WebApplicationFactory<Program>, IAsy
         Environment.SetEnvironmentVariable("Jwt__ExpiryMinutes", "60");
 
         _ = CreateClient();
-        await _postgres.InitializeRespawnerAsync(["listings"]);
+        // Preserve seeded categories so each test starts with a known set of valid CategoryIds.
+        await _postgres.InitializeRespawnerAsync(["listings"], additionalTablesToIgnore: ["categories"]);
         _respawnerReady = true;
     }
 

@@ -92,8 +92,6 @@ public class ListingsController : ControllerBase
             dto.Title,
             dto.Description,
             dto.CategoryId,
-            dto.CategoryName,
-            dto.ParentCategoryId,
             dto.Condition,
             dto.TransferType,
             dto.TransferMethod,
@@ -125,7 +123,7 @@ public class ListingsController : ControllerBase
         var command = new UpdateListingCommand(
             id, userId,
             dto.Title, dto.Description,
-            dto.CategoryId, dto.CategoryName, dto.ParentCategoryId,
+            dto.CategoryId,
             dto.Condition, dto.TransferType, dto.TransferMethod,
             dto.City, dto.District, dto.Latitude, dto.Longitude,
             dto.Tags);

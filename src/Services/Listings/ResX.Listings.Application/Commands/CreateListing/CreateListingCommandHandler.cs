@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using ResX.Common.Caching;
+using ResX.Common.Exceptions;
 using ResX.Common.Persistence;
 using ResX.EventBus.RabbitMQ.Abstractions;
 using ResX.Listings.Application.IntegrationEvents;
@@ -13,6 +14,7 @@ namespace ResX.Listings.Application.Commands.CreateListing;
 public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand, Guid>
 {
     private readonly IListingRepository _listingRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEventBus _eventBus;
     private readonly IMediator _mediator;
@@ -21,6 +23,7 @@ public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand,
 
     public CreateListingCommandHandler(
         IListingRepository listingRepository,
+        ICategoryRepository categoryRepository,
         IUnitOfWork unitOfWork,
         IEventBus eventBus,
         IMediator mediator,
@@ -28,6 +31,7 @@ public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand,
         ILogger<CreateListingCommandHandler> logger)
     {
         _listingRepository = listingRepository;
+        _categoryRepository = categoryRepository;
         _unitOfWork = unitOfWork;
         _eventBus = eventBus;
         _mediator = mediator;
@@ -37,13 +41,18 @@ public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand,
 
     public async Task<Guid> Handle(CreateListingCommand request, CancellationToken cancellationToken)
     {
-        var category = Category.Create(request.CategoryId, request.CategoryName, request.ParentCategoryId);
+        var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Category), request.CategoryId);
+
+        if (!category.IsActive)
+            throw new DomainException("Cannot create a listing in an inactive category.");
+
         var location = Location.Create(request.City, request.District, request.Latitude, request.Longitude);
 
         var listing = Listing.Create(
             request.Title,
             request.Description,
-            category,
+            request.CategoryId,
             request.Condition,
             request.TransferType,
             request.TransferMethod,
@@ -67,7 +76,7 @@ public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand,
             listing.Id,
             listing.DonorId,
             listing.Title,
-            listing.Category.Name,
+            category.Name,
             listing.Location.City), cancellationToken);
 
         _logger.LogInformation("Listing {ListingId} created by donor {DonorId}.", listing.Id, request.DonorId);

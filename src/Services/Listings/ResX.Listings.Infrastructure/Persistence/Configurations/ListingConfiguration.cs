@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ResX.Listings.Domain.AggregateRoots;
-using ResX.Listings.Domain.Entities;
 
 namespace ResX.Listings.Infrastructure.Persistence.Configurations;
 
@@ -14,6 +13,7 @@ public class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(l => l.Id).HasColumnName("id");
         builder.Property(l => l.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
         builder.Property(l => l.Description).HasColumnName("description").HasMaxLength(5000).IsRequired();
+        builder.Property(l => l.CategoryId).HasColumnName("category_id").IsRequired();
         builder.Property(l => l.Condition).HasColumnName("condition").HasConversion<string>().IsRequired();
         builder.Property(l => l.TransferType).HasColumnName("transfer_type").HasConversion<string>().IsRequired();
         builder.Property(l => l.TransferMethod).HasColumnName("transfer_method").HasConversion<string>().IsRequired();
@@ -22,13 +22,6 @@ public class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(l => l.ViewCount).HasColumnName("view_count").HasDefaultValue(0);
         builder.Property(l => l.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(l => l.UpdatedAt).HasColumnName("updated_at");
-
-        builder.OwnsOne(l => l.Category, category =>
-        {
-            category.Property(c => c.Id).HasColumnName("category_id");
-            category.Property(c => c.Name).HasColumnName("category_name").HasMaxLength(100);
-            category.Property(c => c.ParentCategoryId).HasColumnName("parent_category_id");
-        });
 
         builder.OwnsOne(l => l.Location, location =>
         {
@@ -56,5 +49,6 @@ public class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.HasIndex(l => l.DonorId).HasDatabaseName("ix_listings_donor_id");
         builder.HasIndex(l => l.Status).HasDatabaseName("ix_listings_status");
         builder.HasIndex(l => l.CreatedAt).HasDatabaseName("ix_listings_created_at");
+        builder.HasIndex(l => l.CategoryId).HasDatabaseName("ix_listings_category_id");
     }
 }

@@ -12,17 +12,20 @@ namespace ResX.Listings.Application.Commands.UpdateListing;
 public class UpdateListingCommandHandler : IRequestHandler<UpdateListingCommand, Unit>
 {
     private readonly IListingRepository _listingRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cache;
     private readonly ILogger<UpdateListingCommandHandler> _logger;
 
     public UpdateListingCommandHandler(
         IListingRepository listingRepository,
+        ICategoryRepository categoryRepository,
         IUnitOfWork unitOfWork,
         ICacheService cache,
         ILogger<UpdateListingCommandHandler> logger)
     {
         _listingRepository = listingRepository;
+        _categoryRepository = categoryRepository;
         _unitOfWork = unitOfWork;
         _cache = cache;
         _logger = logger;
@@ -36,13 +39,21 @@ public class UpdateListingCommandHandler : IRequestHandler<UpdateListingCommand,
         if (listing.DonorId != request.RequestingUserId)
             throw new ForbiddenException("You can only update your own listings.");
 
-        var category = Category.Create(request.CategoryId, request.CategoryName, request.ParentCategoryId);
+        if (listing.CategoryId != request.CategoryId)
+        {
+            var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Category), request.CategoryId);
+
+            if (!category.IsActive)
+                throw new DomainException("Cannot move a listing to an inactive category.");
+        }
+
         var location = Location.Create(request.City, request.District, request.Latitude, request.Longitude);
 
         listing.Update(
             request.Title,
             request.Description,
-            category,
+            request.CategoryId,
             request.Condition,
             request.TransferType,
             request.TransferMethod,

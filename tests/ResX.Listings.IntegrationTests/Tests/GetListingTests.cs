@@ -172,9 +172,7 @@ public sealed class GetListingTests : IAsyncLifetime
         var dto = new CreateListingDto(
             Title: FakerExtensions.RandomTitle(),
             Description: FakerExtensions.RandomDescription(),
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Мебель",
-            ParentCategoryId: null,
+            CategoryId: Guid.Parse("11111111-1111-1111-1111-111111111103"),
             Condition: ItemCondition.Good,
             TransferType: transferType,
             TransferMethod: TransferMethod.InPerson,

@@ -1,8 +1,8 @@
-﻿using ResX.Common.Domain;
+using ResX.Common.Domain;
 
 namespace ResX.Listings.Domain.Events;
 
 public record ListingCreatedDomainEvent(
     Guid ListingId,
     Guid DonorId,
-    string CategoryName) : DomainEvent;
+    Guid CategoryId) : DomainEvent;

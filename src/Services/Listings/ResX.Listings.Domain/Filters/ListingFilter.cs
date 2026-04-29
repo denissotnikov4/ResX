@@ -1,4 +1,4 @@
-﻿namespace ResX.Listings.Domain.Filters;
+namespace ResX.Listings.Domain.Filters;
 
 public record ListingFilter(
     Guid? CategoryId = null,
@@ -6,4 +6,5 @@ public record ListingFilter(
     string? TransferType = null,
     string? City = null,
     Guid? DonorId = null,
-    string? SearchQuery = null);
+    string? SearchQuery = null,
+    bool IncludeAllStatuses = false);
