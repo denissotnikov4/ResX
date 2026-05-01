@@ -57,6 +57,8 @@ builder.Services.AddSwaggerGen(o =>
             Version = "v1"
         });
 
+    o.ApplyResXDefaults();
+
     o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",

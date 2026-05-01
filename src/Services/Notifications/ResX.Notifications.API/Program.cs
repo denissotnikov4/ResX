@@ -51,6 +51,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(o =>
 {
     o.SwaggerDoc("v1", new OpenApiInfo { Title = "ResX Notifications API", Version = "v1" });
+    o.ApplyResXDefaults();
     o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",

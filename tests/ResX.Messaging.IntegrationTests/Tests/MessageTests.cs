@@ -68,7 +68,7 @@ public sealed class MessageTests : IAsyncLifetime
 
         var response = await _client.PostJsonAsync(
             $"/api/messaging/conversations/{conversationId}/messages",
-            new SendMessageDto(conversationId, "Это тестовое сообщение"));
+            new SendMessageDto("Это тестовое сообщение"));
 
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, because: body);
@@ -81,7 +81,7 @@ public sealed class MessageTests : IAsyncLifetime
 
         await _client.PostJsonAsync(
             $"/api/messaging/conversations/{conversationId}/messages",
-            new SendMessageDto(conversationId, "Привет ещё раз"));
+            new SendMessageDto("Привет ещё раз"));
 
         var listResponse = await _client.GetAsync($"/api/messaging/conversations/{conversationId}/messages");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);

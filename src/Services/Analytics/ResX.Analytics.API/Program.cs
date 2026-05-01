@@ -3,6 +3,7 @@ using ResX.Analytics.Infrastructure;
 using Microsoft.OpenApi.Models;
 using ResX.Analytics.API;
 using ResX.Analytics.Application.Queries.GetEcoStats;
+using ResX.Common.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,7 @@ builder.Services.AddSwaggerGen(o =>
         Version = "v1",
         Description = "Агрегированная экологическая аналитика платформы ресурс-кроссинга"
     });
+    o.ApplyResXDefaults();
 });
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

@@ -73,6 +73,8 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Identity and Authentication service for ResX platform"
     });
 
+    options.ApplyResXDefaults();
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",

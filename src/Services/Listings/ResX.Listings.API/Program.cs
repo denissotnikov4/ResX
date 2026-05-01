@@ -53,6 +53,7 @@ builder.Services.AddSwaggerGen(options =>
         Title = "ResX Listings API",
         Version = "v1"
     });
+    options.ApplyResXDefaults();
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization", Type = SecuritySchemeType.Http,
