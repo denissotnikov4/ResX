@@ -18,6 +18,7 @@ public class ConversationRepository : IConversationRepository
     public async Task<Conversation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.Conversations
+            .AsNoTracking()
             .Include(c => c.Messages)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
@@ -27,6 +28,7 @@ public class ConversationRepository : IConversationRepository
         CancellationToken cancellationToken = default)
     {
         var conversations = await _context.Conversations
+            .AsNoTracking()
             .Include(c => c.Messages)
             .Where(c => c.ListingId == listingId)
             .ToListAsync(cancellationToken);
@@ -40,6 +42,7 @@ public class ConversationRepository : IConversationRepository
         CancellationToken cancellationToken = default)
     {
         var all = await _context.Conversations
+            .AsNoTracking()
             .Include(c => c.Messages)
             .ToListAsync(cancellationToken);
 
@@ -62,6 +65,7 @@ public class ConversationRepository : IConversationRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Messages
+            .AsNoTracking()
             .Where(m => m.ConversationId == conversationId)
             .OrderByDescending(m => m.SentAt);
 
@@ -80,29 +84,34 @@ public class ConversationRepository : IConversationRepository
         return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(Conversation conversation, CancellationToken cancellationToken = default)
+    public async Task AppendMessageAsync(
+        Guid conversationId,
+        Message message,
+        DateTime lastMessageAt,
+        CancellationToken cancellationToken = default)
     {
-        // Collect new messages before touching the tracker (safe — no DetectChanges triggered)
-        var trackedIds = _context.ChangeTracker.Entries<Message>()
-            .Select(e => e.Entity.Id).ToHashSet();
+        // Two explicit operations; keep change-tracker out of the picture entirely.
+        _context.Messages.Add(message);
+        await _context.SaveChangesAsync(cancellationToken);
 
-        var newMessages = conversation.Messages
-            .Where(m => !trackedIds.Contains(m.Id))
-            .ToList();
-
-        // Detach ALL tracked entities to avoid spurious UPDATEs from snapshot false-positives
-        // (e.g. Participants uses AsReadOnly() → new wrapper instance each read → always "modified")
-        foreach (var entry in _context.ChangeTracker.Entries().ToList())
-            entry.State = EntityState.Detached;
-
-        // Register new messages — IUnitOfWork.SaveChangesAsync() (called by the handler) INSERTs them
-        foreach (var msg in newMessages) _context.Messages.Add(msg);
-
-        // Update conversation metadata via raw SQL — direct commit, bypasses change tracking
         await _context.Conversations
-            .Where(c => c.Id == conversation.Id)
+            .Where(c => c.Id == conversationId)
             .ExecuteUpdateAsync(
-                s => s.SetProperty(c => c.LastMessageAt, conversation.LastMessageAt),
+                s => s.SetProperty(c => c.LastMessageAt, lastMessageAt),
+                cancellationToken);
+    }
+
+    public Task<int> MarkMessagesAsReadAsync(
+        Guid conversationId,
+        Guid readerUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Messages
+            .Where(m => m.ConversationId == conversationId
+                        && m.SenderId != readerUserId
+                        && !m.IsRead)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(m => m.IsRead, true),
                 cancellationToken);
     }
 }

@@ -1,5 +1,3 @@
-﻿namespace ResX.Messaging.Application.DTOs;
+namespace ResX.Messaging.Application.DTOs;
 
-public record SendMessageDto(
-    Guid ConversationId,
-    string Content);
+public record SendMessageDto(string Content);

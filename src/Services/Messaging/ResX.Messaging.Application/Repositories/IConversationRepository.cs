@@ -28,5 +28,14 @@ public interface IConversationRepository
 
     Task AddAsync(Conversation conversation, CancellationToken cancellationToken = default);
 
-    Task UpdateAsync(Conversation conversation, CancellationToken cancellationToken = default);
+    Task AppendMessageAsync(
+        Guid conversationId,
+        Message message,
+        DateTime lastMessageAt,
+        CancellationToken cancellationToken = default);
+
+    Task<int> MarkMessagesAsReadAsync(
+        Guid conversationId,
+        Guid readerUserId,
+        CancellationToken cancellationToken = default);
 }
