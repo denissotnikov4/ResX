@@ -36,6 +36,16 @@ public class DisputeRepository : IDisputeRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<Dispute>> GetAllAsync(int pageNumber, int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Disputes
+            .Include(d => d.Evidences)
+            .OrderByDescending(d => d.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize).Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<Dispute>> GetOpenDisputesAsync(int pageNumber, int pageSize,
         CancellationToken cancellationToken = default)
     {

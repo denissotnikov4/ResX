@@ -27,7 +27,10 @@ public class DisputesController : ControllerBase
         _repository = repository;
     }
 
-    /// <summary>Returns all disputes for the authenticated user.</summary>
+    /// <summary>
+    /// Returns disputes visible to the caller. Admin/Moderator see every dispute regardless of status;
+    /// other authenticated users see only disputes where they are initiator or respondent.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -36,9 +39,9 @@ public class DisputesController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
-
-        var disputes = await _repository.GetByUserIdAsync(userId, pageNumber, pageSize, cancellationToken);
+        var disputes = User.IsInRole("Admin") || User.IsInRole("Moderator")
+            ? await _repository.GetAllAsync(pageNumber, pageSize, cancellationToken)
+            : await _repository.GetByUserIdAsync(GetCurrentUserId(), pageNumber, pageSize, cancellationToken);
 
         return Ok(disputes.Select(d => new
         {

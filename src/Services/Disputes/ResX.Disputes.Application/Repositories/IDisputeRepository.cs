@@ -7,6 +7,7 @@ public interface IDisputeRepository
 {
     Task<Dispute?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<List<Dispute>> GetByUserIdAsync(Guid userId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<List<Dispute>> GetAllAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<List<Dispute>> GetOpenDisputesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task AddAsync(Dispute dispute, CancellationToken cancellationToken = default);
     Task AddEvidenceAsync(Evidence evidence, CancellationToken cancellationToken = default);
