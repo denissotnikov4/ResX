@@ -358,6 +358,9 @@ services:
       Jwt__Issuer: "ResX.Identity"
       Jwt__Audience: "ResX"
       S3__ServiceUrl: "http://minio:9000"
+      # Browser-facing URL used to sign presigned URLs. Must point to MinIO S3 API (port 9000), NOT Console (9001).
+      # For prod override via env: S3_PUBLIC_URL=https://files.your-domain.com
+      S3__PublicUrl: "${S3_PUBLIC_URL:-http://localhost:9000}"
       S3__AccessKey: minioadmin
       S3__SecretKey: minioadmin123
       S3__BucketName: resx-files
