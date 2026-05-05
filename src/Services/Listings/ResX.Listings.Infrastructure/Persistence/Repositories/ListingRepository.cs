@@ -24,6 +24,18 @@ public class ListingRepository : IListingRepository
             .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Listing>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return Array.Empty<Listing>();
+
+        return await _context.Listings
+            .Where(l => ids.Contains(l.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<PagedList<Listing>> GetPagedAsync(
         ListingFilter filter,
         int pageNumber,

@@ -2,6 +2,7 @@ using Grpc.Core;
 using MediatR;
 using ResX.Listings.Application.Commands.ChangeListingStatus;
 using ResX.Listings.Application.Queries.GetListingById;
+using ResX.Listings.Application.Repositories;
 using ResX.Listings.Domain.Enums;
 
 namespace ResX.Listings.API.Grpc;
@@ -9,12 +10,43 @@ namespace ResX.Listings.API.Grpc;
 public class ListingsGrpcService : ListingsService.ListingsServiceBase
 {
     private readonly IMediator _mediator;
+    private readonly IListingRepository _repository;
     private readonly ILogger<ListingsGrpcService> _logger;
 
-    public ListingsGrpcService(IMediator mediator, ILogger<ListingsGrpcService> logger)
+    public ListingsGrpcService(IMediator mediator, IListingRepository repository, ILogger<ListingsGrpcService> logger)
     {
         _mediator = mediator;
+        _repository = repository;
         _logger = logger;
+    }
+
+    public override async Task<GetListingsBriefResponse> GetListingsBrief(
+        GetListingsBriefRequest request,
+        ServerCallContext context)
+    {
+        var ids = request.ListingIds
+            .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .Distinct()
+            .ToList();
+
+        var response = new GetListingsBriefResponse();
+        if (ids.Count == 0)
+            return response;
+
+        var listings = await _repository.GetByIdsAsync(ids, context.CancellationToken);
+        foreach (var l in listings)
+        {
+            response.Listings.Add(new ListingBrief
+            {
+                ListingId = l.Id.ToString(),
+                Title = l.Title,
+                DonorId = l.DonorId.ToString(),
+                Status = l.Status.ToString()
+            });
+        }
+        return response;
     }
 
     public override async Task<GetListingByIdResponse> GetListingById(

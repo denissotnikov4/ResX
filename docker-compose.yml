@@ -241,6 +241,8 @@ services:
       EventBus__UserName: guest
       EventBus__Password: guest
       ConnectionStrings__Redis: "redis:6379,password=redis_password"
+      Services__Users__GrpcUrl: "http://users-service:8081"
+      Services__Listings__GrpcUrl: "http://listings-service:8081"
     depends_on:
       postgres:
         condition: service_healthy

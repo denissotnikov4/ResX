@@ -11,6 +11,13 @@
         <PackageReference Include="FluentMigrator" Version="6.2.0"/>
         <PackageReference Include="FluentMigrator.Runner" Version="6.2.0"/>
         <PackageReference Include="FluentMigrator.Runner.Postgres" Version="6.2.0"/>
+        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.67.0"/>
+        <PackageReference Include="Google.Protobuf" Version="3.29.3"/>
+        <PackageReference Include="Grpc.Tools" Version="2.67.0" PrivateAssets="All"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Protobuf Include="../../../Protos/users.proto" GrpcServices="Client"/>
+        <Protobuf Include="../../../Protos/listings.proto" GrpcServices="Client"/>
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="../ResX.Messaging.Application/ResX.Messaging.Application.csproj"/>
