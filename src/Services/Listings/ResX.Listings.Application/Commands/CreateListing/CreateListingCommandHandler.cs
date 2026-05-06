@@ -58,6 +58,9 @@ public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand,
             request.TransferMethod,
             location,
             request.DonorId,
+            request.WeightGrams,
+            category.Co2SavedPer100GramsG,
+            category.WasteSavedPer100GramsG,
             request.Tags);
 
         await _listingRepository.AddAsync(listing, cancellationToken);
@@ -77,7 +80,10 @@ public class CreateListingCommandHandler : IRequestHandler<CreateListingCommand,
             listing.DonorId,
             listing.Title,
             category.Name,
-            listing.Location.City), cancellationToken);
+            listing.Location.City,
+            listing.WeightGrams,
+            listing.Co2SavedG,
+            listing.WasteSavedG), cancellationToken);
 
         _logger.LogInformation("Listing {ListingId} created by donor {DonorId}.", listing.Id, request.DonorId);
 

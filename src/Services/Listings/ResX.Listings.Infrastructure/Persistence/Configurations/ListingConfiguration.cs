@@ -20,6 +20,9 @@ public class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(l => l.Status).HasColumnName("status").HasConversion<string>().IsRequired();
         builder.Property(l => l.DonorId).HasColumnName("donor_id").IsRequired();
         builder.Property(l => l.ViewCount).HasColumnName("view_count").HasDefaultValue(0);
+        builder.Property(l => l.WeightGrams).HasColumnName("weight_grams").IsRequired();
+        builder.Property(l => l.Co2SavedG).HasColumnName("co2_saved_g").IsRequired();
+        builder.Property(l => l.WasteSavedG).HasColumnName("waste_saved_g").IsRequired();
         builder.Property(l => l.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(l => l.UpdatedAt).HasColumnName("updated_at");
 

@@ -60,6 +60,9 @@ public class GetListingByIdQueryHandler : IRequestHandler<GetListingByIdQuery, L
             listing.Photos.Select(p => new ListingPhotoDto(p.Id, p.Url, p.DisplayOrder)).ToList().AsReadOnly(),
             listing.Tags.ToList().AsReadOnly(),
             listing.ViewCount,
+            listing.WeightGrams,
+            listing.Co2SavedG,
+            listing.WasteSavedG,
             listing.CreatedAt,
             listing.UpdatedAt);
     }

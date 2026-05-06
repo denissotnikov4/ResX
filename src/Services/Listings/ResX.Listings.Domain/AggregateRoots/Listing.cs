@@ -37,6 +37,15 @@ public class Listing : AggregateRoot<Guid>
 
     public int ViewCount { get; private set; }
 
+    /// <summary>Weight of the item being transferred, in grams.</summary>
+    public int WeightGrams { get; private set; }
+
+    /// <summary>Cached: grams of CO2 saved by this transfer (weight × category rate / 100).</summary>
+    public int Co2SavedG { get; private set; }
+
+    /// <summary>Cached: grams of waste diverted from landfill by this transfer.</summary>
+    public int WasteSavedG { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
 
     public DateTime? UpdatedAt { get; private set; }
@@ -54,6 +63,9 @@ public class Listing : AggregateRoot<Guid>
         TransferMethod transferMethod,
         Location location,
         Guid donorId,
+        int weightGrams,
+        int categoryCo2Per100GramsG,
+        int categoryWastePer100GramsG,
         IEnumerable<string>? tags = null)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -76,6 +88,13 @@ public class Listing : AggregateRoot<Guid>
             throw new DomainException("Donor ID cannot be empty.");
         }
 
+        if (weightGrams <= 0)
+        {
+            throw new DomainException("Weight must be greater than 0 grams.");
+        }
+
+        var (co2, waste) = ComputeEcoImpact(weightGrams, categoryCo2Per100GramsG, categoryWastePer100GramsG);
+
         var listing = new Listing
         {
             Id = Guid.NewGuid(),
@@ -89,6 +108,9 @@ public class Listing : AggregateRoot<Guid>
             DonorId = donorId,
             Status = ListingStatus.Draft,
             ViewCount = 0,
+            WeightGrams = weightGrams,
+            Co2SavedG = co2,
+            WasteSavedG = waste,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -110,6 +132,9 @@ public class Listing : AggregateRoot<Guid>
         TransferType transferType,
         TransferMethod transferMethod,
         Location location,
+        int weightGrams,
+        int categoryCo2Per100GramsG,
+        int categoryWastePer100GramsG,
         IEnumerable<string>? tags = null)
     {
         if (Status is ListingStatus.Completed or ListingStatus.Cancelled)
@@ -122,6 +147,13 @@ public class Listing : AggregateRoot<Guid>
             throw new DomainException("Category ID cannot be empty.");
         }
 
+        if (weightGrams <= 0)
+        {
+            throw new DomainException("Weight must be greater than 0 grams.");
+        }
+
+        var (co2, waste) = ComputeEcoImpact(weightGrams, categoryCo2Per100GramsG, categoryWastePer100GramsG);
+
         Title = title;
         Description = description;
         CategoryId = categoryId;
@@ -129,6 +161,9 @@ public class Listing : AggregateRoot<Guid>
         TransferType = transferType;
         TransferMethod = transferMethod;
         Location = location;
+        WeightGrams = weightGrams;
+        Co2SavedG = co2;
+        WasteSavedG = waste;
         UpdatedAt = DateTime.UtcNow;
 
         _tags.Clear();
@@ -136,6 +171,14 @@ public class Listing : AggregateRoot<Guid>
         {
             _tags.AddRange(tags.Where(t => !string.IsNullOrWhiteSpace(t)));
         }
+    }
+
+    private static (int co2G, int wasteG) ComputeEcoImpact(int weightGrams, int co2Per100, int wastePer100)
+    {
+        // Integer math: weight * rate / 100. Truncates fractional grams (negligible for kg-scale items).
+        var co2 = (int)((long)weightGrams * co2Per100 / 100);
+        var waste = (int)((long)weightGrams * wastePer100 / 100);
+        return (co2, waste);
     }
 
     public void ChangeStatus(ListingStatus newStatus)

@@ -9,4 +9,6 @@ public record UpdateCategoryCommand(
     string? Description,
     Guid? ParentCategoryId,
     string? IconUrl,
-    int DisplayOrder) : IRequest<Unit>;
+    int DisplayOrder,
+    int Co2SavedPer100GramsG,
+    int WasteSavedPer100GramsG) : IRequest<Unit>;

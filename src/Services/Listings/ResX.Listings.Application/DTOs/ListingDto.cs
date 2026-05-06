@@ -14,5 +14,8 @@ public record ListingDto(
     IReadOnlyList<ListingPhotoDto> Photos,
     IReadOnlyList<string> Tags,
     int ViewCount,
+    int WeightGrams,
+    int Co2SavedG,
+    int WasteSavedG,
     DateTime CreatedAt,
     DateTime? UpdatedAt);

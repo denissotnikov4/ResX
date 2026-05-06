@@ -14,6 +14,8 @@ public class CreateListingCommandValidator : AbstractValidator<CreateListingComm
             .NotEmpty().WithMessage("Description is required.")
             .MaximumLength(5000).WithMessage("Description cannot exceed 5000 characters.");
         RuleFor(x => x.CategoryId).NotEmpty().WithMessage("Category is required.");
+        RuleFor(x => x.WeightGrams)
+            .GreaterThan(0).WithMessage("Weight (grams) must be greater than 0.");
         RuleFor(x => x.City).NotEmpty().WithMessage("City is required.");
     }
 }

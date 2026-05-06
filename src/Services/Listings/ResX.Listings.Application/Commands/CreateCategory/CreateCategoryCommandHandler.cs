@@ -35,7 +35,9 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
             request.Description,
             request.ParentCategoryId,
             request.IconUrl,
-            request.DisplayOrder);
+            request.DisplayOrder,
+            request.Co2SavedPer100GramsG,
+            request.WasteSavedPer100GramsG);
 
         await _categoryRepository.AddAsync(category, cancellationToken);
 
@@ -46,7 +48,9 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
             category.ParentCategoryId,
             category.IconUrl,
             category.IsActive,
-            category.DisplayOrder
+            category.DisplayOrder,
+            category.Co2SavedPer100GramsG,
+            category.WasteSavedPer100GramsG
         });
 
         var history = CategoryHistory.Create(

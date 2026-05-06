@@ -8,4 +8,6 @@ public record CreateCategoryCommand(
     string? Description,
     Guid? ParentCategoryId,
     string? IconUrl,
-    int DisplayOrder) : IRequest<Guid>;
+    int DisplayOrder,
+    int Co2SavedPer100GramsG,
+    int WasteSavedPer100GramsG) : IRequest<Guid>;

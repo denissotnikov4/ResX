@@ -27,6 +27,8 @@ public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, IRe
             c.IconUrl,
             c.IsActive,
             c.DisplayOrder,
+            c.Co2SavedPer100GramsG,
+            c.WasteSavedPer100GramsG,
             c.CreatedAt,
             c.UpdatedAt)).ToList();
     }

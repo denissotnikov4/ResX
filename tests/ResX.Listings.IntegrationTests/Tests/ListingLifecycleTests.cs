@@ -179,6 +179,7 @@ public sealed class ListingLifecycleTests : IAsyncLifetime
         Title: FakerExtensions.RandomTitle(),
         Description: FakerExtensions.RandomDescription(),
         CategoryId: Guid.Parse("11111111-1111-1111-1111-111111111102"),
+        WeightGrams: 800,
         Condition: ItemCondition.LikeNew,
         TransferType: TransferType.Gift,
         TransferMethod: TransferMethod.Both,

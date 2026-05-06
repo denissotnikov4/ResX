@@ -13,5 +13,7 @@ public class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCo
         RuleFor(x => x.Description).MaximumLength(500);
         RuleFor(x => x.IconUrl).MaximumLength(500);
         RuleFor(x => x.DisplayOrder).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Co2SavedPer100GramsG).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.WasteSavedPer100GramsG).GreaterThanOrEqualTo(0);
     }
 }

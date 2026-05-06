@@ -17,6 +17,8 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.IconUrl).HasColumnName("icon_url").HasMaxLength(500);
         builder.Property(c => c.IsActive).HasColumnName("is_active").IsRequired();
         builder.Property(c => c.DisplayOrder).HasColumnName("display_order").IsRequired();
+        builder.Property(c => c.Co2SavedPer100GramsG).HasColumnName("co2_saved_per_100g_g").IsRequired();
+        builder.Property(c => c.WasteSavedPer100GramsG).HasColumnName("waste_saved_per_100g_g").IsRequired();
         builder.Property(c => c.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(c => c.UpdatedAt).HasColumnName("updated_at");
 

@@ -50,7 +50,9 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
             request.Description,
             request.ParentCategoryId,
             request.IconUrl,
-            request.DisplayOrder);
+            request.DisplayOrder,
+            request.Co2SavedPer100GramsG,
+            request.WasteSavedPer100GramsG);
 
         var newValues = SerializeSnapshot(category);
 
@@ -87,6 +89,8 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
         category.ParentCategoryId,
         category.IconUrl,
         category.IsActive,
-        category.DisplayOrder
+        category.DisplayOrder,
+        category.Co2SavedPer100GramsG,
+        category.WasteSavedPer100GramsG
     });
 }

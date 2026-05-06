@@ -39,14 +39,11 @@ public class UpdateListingCommandHandler : IRequestHandler<UpdateListingCommand,
         if (listing.DonorId != request.RequestingUserId)
             throw new ForbiddenException("You can only update your own listings.");
 
-        if (listing.CategoryId != request.CategoryId)
-        {
-            var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
-                ?? throw new NotFoundException(nameof(Category), request.CategoryId);
+        var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Category), request.CategoryId);
 
-            if (!category.IsActive)
-                throw new DomainException("Cannot move a listing to an inactive category.");
-        }
+        if (!category.IsActive)
+            throw new DomainException("Cannot move a listing to an inactive category.");
 
         var location = Location.Create(request.City, request.District, request.Latitude, request.Longitude);
 
@@ -58,6 +55,9 @@ public class UpdateListingCommandHandler : IRequestHandler<UpdateListingCommand,
             request.TransferType,
             request.TransferMethod,
             location,
+            request.WeightGrams,
+            category.Co2SavedPer100GramsG,
+            category.WasteSavedPer100GramsG,
             request.Tags);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

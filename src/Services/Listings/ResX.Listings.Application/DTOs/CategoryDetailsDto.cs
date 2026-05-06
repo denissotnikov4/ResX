@@ -8,5 +8,7 @@ public record CategoryDetailsDto(
     string? IconUrl,
     bool IsActive,
     int DisplayOrder,
+    int Co2SavedPer100GramsG,
+    int WasteSavedPer100GramsG,
     DateTime CreatedAt,
     DateTime? UpdatedAt);

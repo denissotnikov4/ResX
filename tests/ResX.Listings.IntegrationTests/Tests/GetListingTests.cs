@@ -173,6 +173,7 @@ public sealed class GetListingTests : IAsyncLifetime
             Title: FakerExtensions.RandomTitle(),
             Description: FakerExtensions.RandomDescription(),
             CategoryId: Guid.Parse("11111111-1111-1111-1111-111111111103"),
+            WeightGrams: 5000,
             Condition: ItemCondition.Good,
             TransferType: transferType,
             TransferMethod: TransferMethod.InPerson,

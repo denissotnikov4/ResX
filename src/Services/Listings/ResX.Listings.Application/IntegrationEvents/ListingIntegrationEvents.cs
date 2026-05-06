@@ -7,7 +7,10 @@ public record ListingCreatedIntegrationEvent(
     Guid DonorId,
     string Title,
     string CategoryName,
-    string City) : IntegrationEvent;
+    string City,
+    int WeightGrams,
+    int Co2SavedG,
+    int WasteSavedG) : IntegrationEvent;
 
 public record ListingStatusChangedIntegrationEvent(
     Guid ListingId,

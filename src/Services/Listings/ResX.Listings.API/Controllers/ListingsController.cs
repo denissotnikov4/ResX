@@ -92,6 +92,7 @@ public class ListingsController : ControllerBase
             dto.Title,
             dto.Description,
             dto.CategoryId,
+            dto.WeightGrams,
             dto.Condition,
             dto.TransferType,
             dto.TransferMethod,
@@ -124,6 +125,7 @@ public class ListingsController : ControllerBase
             id, userId,
             dto.Title, dto.Description,
             dto.CategoryId,
+            dto.WeightGrams,
             dto.Condition, dto.TransferType, dto.TransferMethod,
             dto.City, dto.District, dto.Latitude, dto.Longitude,
             dto.Tags);

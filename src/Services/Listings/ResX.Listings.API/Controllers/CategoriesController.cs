@@ -50,7 +50,9 @@ public class CategoriesController : ControllerBase
             request.Description,
             request.ParentCategoryId,
             request.IconUrl,
-            request.DisplayOrder);
+            request.DisplayOrder,
+            request.Co2SavedPer100GramsG,
+            request.WasteSavedPer100GramsG);
 
         var categoryId = await _mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetAll), new { id = categoryId }, new { id = categoryId });
@@ -77,7 +79,9 @@ public class CategoriesController : ControllerBase
             request.Description,
             request.ParentCategoryId,
             request.IconUrl,
-            request.DisplayOrder);
+            request.DisplayOrder,
+            request.Co2SavedPer100GramsG,
+            request.WasteSavedPer100GramsG);
 
         await _mediator.Send(command, cancellationToken);
         return NoContent();

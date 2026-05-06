@@ -8,6 +8,7 @@ public record CreateListingCommand(
     string Title,
     string Description,
     Guid CategoryId,
+    int WeightGrams,
     ItemCondition Condition,
     TransferType TransferType,
     TransferMethod TransferMethod,

@@ -86,6 +86,9 @@ app.Services.RunMigrations();
 // Subscribe to RabbitMQ events
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 eventBus.Subscribe<UserRegisteredIntegrationEvent, UserRegisteredIntegrationEventHandler>();
+eventBus.Subscribe<
+    ResX.Users.Application.IntegrationEvents.ListingCreated.ListingCreatedIntegrationEvent,
+    ResX.Users.Application.IntegrationEvents.ListingCreated.ListingCreatedIntegrationEventHandler>();
 
 app.UseExceptionHandler();
 

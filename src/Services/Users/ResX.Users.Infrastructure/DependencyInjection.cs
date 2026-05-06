@@ -47,6 +47,7 @@ public static class DependencyInjection
 
         // Register event handlers
         services.AddScoped<UserRegisteredIntegrationEventHandler>();
+        services.AddScoped<ResX.Users.Application.IntegrationEvents.ListingCreated.ListingCreatedIntegrationEventHandler>();
 
         return services;
     }

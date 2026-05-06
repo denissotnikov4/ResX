@@ -13,5 +13,9 @@ public class CreateCategoryCommandValidator : AbstractValidator<CreateCategoryCo
         RuleFor(x => x.IconUrl).MaximumLength(500);
         RuleFor(x => x.DisplayOrder)
             .GreaterThanOrEqualTo(0).WithMessage("Display order cannot be negative.");
+        RuleFor(x => x.Co2SavedPer100GramsG)
+            .GreaterThanOrEqualTo(0).WithMessage("CO2 rate cannot be negative.");
+        RuleFor(x => x.WasteSavedPer100GramsG)
+            .GreaterThanOrEqualTo(0).WithMessage("Waste rate cannot be negative.");
     }
 }

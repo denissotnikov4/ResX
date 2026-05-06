@@ -11,4 +11,7 @@ public record ListingPreviewDto(
     string? ThumbnailUrl,
     DonorDto? Donor,
     int ViewCount,
+    int WeightGrams,
+    int Co2SavedG,
+    int WasteSavedG,
     DateTime CreatedAt);

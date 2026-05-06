@@ -50,6 +50,9 @@ public class GetMyListingsQueryHandler : IRequestHandler<GetMyListingsQuery, Pag
                 listing.Photos.OrderBy(p => p.DisplayOrder).FirstOrDefault()?.Url,
                 Donor: null,
                 listing.ViewCount,
+                listing.WeightGrams,
+                listing.Co2SavedG,
+                listing.WasteSavedG,
                 listing.CreatedAt);
         }).ToList().AsReadOnly();
 

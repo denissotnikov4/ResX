@@ -59,6 +59,9 @@ public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedLi
                 listing.Photos.OrderBy(p => p.DisplayOrder).FirstOrDefault()?.Url,
                 listing.DonorId,
                 listing.ViewCount,
+                listing.WeightGrams,
+                listing.Co2SavedG,
+                listing.WasteSavedG,
                 listing.CreatedAt)).ToList();
 
             return new PagedList<CachedListingPreview>(
@@ -96,6 +99,9 @@ public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedLi
                     i.ThumbnailUrl,
                     donors.TryGetValue(i.DonorId, out var donor) ? donor : null,
                     i.ViewCount,
+                    i.WeightGrams,
+                    i.Co2SavedG,
+                    i.WasteSavedG,
                     i.CreatedAt);
             })
             .ToList()
@@ -119,5 +125,8 @@ public class GetListingsQueryHandler : IRequestHandler<GetListingsQuery, PagedLi
         string? ThumbnailUrl,
         Guid DonorId,
         int ViewCount,
+        int WeightGrams,
+        int Co2SavedG,
+        int WasteSavedG,
         DateTime CreatedAt);
 }

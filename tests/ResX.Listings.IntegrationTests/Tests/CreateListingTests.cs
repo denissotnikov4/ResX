@@ -165,6 +165,7 @@ public sealed class CreateListingTests : IAsyncLifetime
         Title: FakerExtensions.RandomTitle(),
         Description: FakerExtensions.RandomDescription(),
         CategoryId: SeededFurnitureCategoryId,
+        WeightGrams: 5000,
         Condition: ItemCondition.Good,
         TransferType: TransferType.Gift,
         TransferMethod: TransferMethod.InPerson,
