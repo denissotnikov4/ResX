@@ -5,7 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using ResX.EventBus.RabbitMQ;
 using ResX.EventBus.RabbitMQ.Abstractions;
 using ResX.Common.Persistence;
+using ResX.Listings.API.Grpc;
 using ResX.Transactions.Application.Repositories;
+using ResX.Transactions.Application.Services;
+using ResX.Transactions.Infrastructure.Grpc;
 using ResX.Transactions.Infrastructure.Migrations;
 using ResX.Transactions.Infrastructure.Persistence;
 using ResX.Transactions.Infrastructure.Persistence.Repositories;
@@ -35,6 +38,14 @@ public static class DependencyInjection
         services.Configure<EventBusOptions>(configuration.GetSection(EventBusOptions.SectionName));
         services.AddSingleton<RabbitMQConnection>();
         services.AddSingleton<IEventBus, RabbitMQEventBus>();
+
+        var listingsGrpcUrl = configuration["Services:Listings:GrpcUrl"]
+            ?? throw new InvalidOperationException("Services:Listings:GrpcUrl is not configured.");
+        services.AddGrpcClient<ListingsService.ListingsServiceClient>(o =>
+        {
+            o.Address = new Uri(listingsGrpcUrl);
+        });
+        services.AddScoped<IListingsEcoClient, ListingsEcoGrpcClient>();
 
         return services;
     }

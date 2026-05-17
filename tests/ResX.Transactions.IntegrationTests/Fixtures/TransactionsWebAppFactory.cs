@@ -9,6 +9,7 @@ using ResX.EventBus.RabbitMQ;
 using ResX.EventBus.RabbitMQ.Abstractions;
 using ResX.IntegrationTests.Common.Fixtures;
 using ResX.IntegrationTests.Common.Helpers;
+using ResX.Transactions.Application.Services;
 using Xunit;
 
 namespace ResX.Transactions.IntegrationTests.Fixtures;
@@ -18,6 +19,7 @@ namespace ResX.Transactions.IntegrationTests.Fixtures;
 /// - PostgreSQL: real Testcontainers instance.
 /// - Redis: not used by Transactions service.
 /// - RabbitMQ: NSubstitute mock.
+/// - Listings gRPC client: NSubstitute mock returning fixed eco-impact for any listingId.
 /// </summary>
 public sealed class TransactionsWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -38,6 +40,7 @@ public sealed class TransactionsWebAppFactory : WebApplicationFactory<Program>, 
                 ["RabbitMQ:HostName"] = "localhost",
                 ["RabbitMQ:UserName"] = "guest",
                 ["RabbitMQ:Password"] = "guest",
+                ["Services:Listings:GrpcUrl"] = "http://localhost:0",
             });
         });
 
@@ -46,6 +49,13 @@ public sealed class TransactionsWebAppFactory : WebApplicationFactory<Program>, 
             services.RemoveAll<RabbitMQConnection>();
             services.RemoveAll<IEventBus>();
             services.AddSingleton(Substitute.For<IEventBus>());
+
+            services.RemoveAll<IListingsEcoClient>();
+            var listingsEco = Substitute.For<IListingsEcoClient>();
+            listingsEco
+                .GetEcoAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<ListingEcoInfo?>(new ListingEcoInfo(1000, 3000, 1000)));
+            services.AddSingleton(listingsEco);
         });
     }
 
@@ -58,6 +68,7 @@ public sealed class TransactionsWebAppFactory : WebApplicationFactory<Program>, 
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtTokenHelper.TestIssuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", JwtTokenHelper.TestAudience);
         Environment.SetEnvironmentVariable("Jwt__ExpiryMinutes", "60");
+        Environment.SetEnvironmentVariable("Services__Listings__GrpcUrl", "http://localhost:0");
 
         _ = CreateClient();
         await _postgres.InitializeRespawnerAsync(["transactions"]);
@@ -77,6 +88,7 @@ public sealed class TransactionsWebAppFactory : WebApplicationFactory<Program>, 
         Environment.SetEnvironmentVariable("Jwt__Issuer", null);
         Environment.SetEnvironmentVariable("Jwt__Audience", null);
         Environment.SetEnvironmentVariable("Jwt__ExpiryMinutes", null);
+        Environment.SetEnvironmentVariable("Services__Listings__GrpcUrl", null);
         await _postgres.DisposeAsync();
         await base.DisposeAsync();
     }

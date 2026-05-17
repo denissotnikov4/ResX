@@ -87,8 +87,8 @@ app.Services.RunMigrations();
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 eventBus.Subscribe<UserRegisteredIntegrationEvent, UserRegisteredIntegrationEventHandler>();
 eventBus.Subscribe<
-    ResX.Users.Application.IntegrationEvents.ListingCreated.ListingCreatedIntegrationEvent,
-    ResX.Users.Application.IntegrationEvents.ListingCreated.ListingCreatedIntegrationEventHandler>();
+    ResX.Users.Application.IntegrationEvents.TransactionCompleted.TransactionCompletedIntegrationEvent,
+    ResX.Users.Application.IntegrationEvents.TransactionCompleted.TransactionCompletedIntegrationEventHandler>();
 
 app.UseExceptionHandler();
 

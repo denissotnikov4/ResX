@@ -68,7 +68,10 @@ public class ListingsGrpcService : ListingsService.ListingsServiceBase
                 DonorId = listing.Donor.Id.ToString(),
                 Status = listing.Status,
                 TransferType = listing.TransferType,
-                CategoryName = listing.Category.Name
+                CategoryName = listing.Category.Name,
+                WeightGrams = listing.WeightGrams,
+                Co2SavedG = listing.Co2SavedG,
+                WasteSavedG = listing.WasteSavedG
             };
         }
         catch (Common.Exceptions.NotFoundException)

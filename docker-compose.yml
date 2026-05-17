@@ -211,6 +211,7 @@ services:
       EventBus__VirtualHost: resx
       EventBus__UserName: guest
       EventBus__Password: guest
+      Services__Listings__GrpcUrl: "http://listings-service:8081"
     depends_on:
       postgres:
         condition: service_healthy

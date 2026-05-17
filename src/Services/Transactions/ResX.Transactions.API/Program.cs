@@ -10,6 +10,9 @@ using Microsoft.OpenApi.Models;
 using ResX.Transactions.API;
 using ResX.Transactions.Application.Commands.CreateTransaction;
 
+// Required for plaintext HTTP/2 gRPC client to listings-service:8081 inside the Docker network.
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

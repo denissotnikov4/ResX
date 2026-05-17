@@ -22,6 +22,9 @@ message GetListingByIdResponse {
   string status = 4;
   string transfer_type = 5;
   string category_name = 6;
+  int32 weight_grams = 7;
+  int32 co2_saved_g = 8;
+  int32 waste_saved_g = 9;
 }
 
 message GetListingsBriefRequest {
