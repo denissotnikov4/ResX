@@ -9,6 +9,8 @@ using ResX.EventBus.RabbitMQ;
 using ResX.EventBus.RabbitMQ.Abstractions;
 using ResX.IntegrationTests.Common.Fixtures;
 using ResX.IntegrationTests.Common.Helpers;
+using ResX.Messaging.Application.DTOs;
+using ResX.Messaging.Application.Services;
 using Xunit;
 
 namespace ResX.Messaging.IntegrationTests.Fixtures;
@@ -32,6 +34,8 @@ public sealed class MessagingWebAppFactory : WebApplicationFactory<Program>, IAs
                 ["RabbitMQ:HostName"] = "localhost",
                 ["RabbitMQ:UserName"] = "guest",
                 ["RabbitMQ:Password"] = "guest",
+                ["Services:Users:GrpcUrl"] = "http://localhost:0",
+                ["Services:Listings:GrpcUrl"] = "http://localhost:0",
             });
         });
 
@@ -40,6 +44,34 @@ public sealed class MessagingWebAppFactory : WebApplicationFactory<Program>, IAs
             services.RemoveAll<RabbitMQConnection>();
             services.RemoveAll<IEventBus>();
             services.AddSingleton(Substitute.For<IEventBus>());
+
+            services.RemoveAll<IUsersClient>();
+            var usersClient = Substitute.For<IUsersClient>();
+            usersClient
+                .GetUserSummariesAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo =>
+                {
+                    var ids = callInfo.Arg<IReadOnlyCollection<Guid>>();
+                    IReadOnlyDictionary<Guid, ParticipantSummaryDto> map = ids.ToDictionary(
+                        id => id,
+                        id => new ParticipantSummaryDto(id, "Test", "User", null));
+                    return Task.FromResult(map);
+                });
+            services.AddSingleton(usersClient);
+
+            services.RemoveAll<IListingsClient>();
+            var listingsClient = Substitute.For<IListingsClient>();
+            listingsClient
+                .GetListingSummariesAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo =>
+                {
+                    var ids = callInfo.Arg<IReadOnlyCollection<Guid>>();
+                    IReadOnlyDictionary<Guid, ListingSummaryDto> map = ids.ToDictionary(
+                        id => id,
+                        id => new ListingSummaryDto(id, "Test listing"));
+                    return Task.FromResult(map);
+                });
+            services.AddSingleton(listingsClient);
         });
     }
 
@@ -52,6 +84,8 @@ public sealed class MessagingWebAppFactory : WebApplicationFactory<Program>, IAs
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtTokenHelper.TestIssuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", JwtTokenHelper.TestAudience);
         Environment.SetEnvironmentVariable("Jwt__ExpiryMinutes", "60");
+        Environment.SetEnvironmentVariable("Services__Users__GrpcUrl", "http://localhost:0");
+        Environment.SetEnvironmentVariable("Services__Listings__GrpcUrl", "http://localhost:0");
 
         _ = CreateClient();
         await _postgres.InitializeRespawnerAsync(["messaging"]);
@@ -71,6 +105,8 @@ public sealed class MessagingWebAppFactory : WebApplicationFactory<Program>, IAs
         Environment.SetEnvironmentVariable("Jwt__Issuer", null);
         Environment.SetEnvironmentVariable("Jwt__Audience", null);
         Environment.SetEnvironmentVariable("Jwt__ExpiryMinutes", null);
+        Environment.SetEnvironmentVariable("Services__Users__GrpcUrl", null);
+        Environment.SetEnvironmentVariable("Services__Listings__GrpcUrl", null);
         await _postgres.DisposeAsync();
         await base.DisposeAsync();
     }
