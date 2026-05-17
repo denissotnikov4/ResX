@@ -63,10 +63,11 @@ public class AnalyticsRepository : IAnalyticsRepository
         await conn.OpenAsync(cancellationToken);
 
         await using var cmd = new NpgsqlCommand(
-            @"SELECT category_id, category_name, COUNT(*) as count
-              FROM listings.listings
-              WHERE status IN ('Active', 'Completed')
-              GROUP BY category_id, category_name
+            @"SELECT l.category_id, c.name, COUNT(*) AS count
+              FROM listings.listings l
+              JOIN listings.categories c ON c.id = l.category_id
+              WHERE l.status IN ('Active', 'Completed')
+              GROUP BY l.category_id, c.name
               ORDER BY count DESC
               LIMIT 20",
             conn);
