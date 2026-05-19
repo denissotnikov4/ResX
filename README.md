@@ -12,6 +12,7 @@
 - [Tech Stack](#tech-stack)
 - [Требования](#требования)
 - [Быстрый старт (Docker Compose)](#быстрый-старт-docker-compose)
+- [Деплой на Timeweb Cloud App Platform](#деплой-на-timeweb-cloud-app-platform)
 - [Seeded-данные](#seeded-данные)
 - [Переменные окружения](#переменные-окружения)
 - [API Endpoints](#api-endpoints)
@@ -158,6 +159,15 @@ ResX.<Service>.API             ← ASP.NET Core Controllers, Program.cs
 
 ## Быстрый старт (Docker Compose)
 
+В репозитории **два compose-файла**:
+
+| Файл                       | Назначение                                                                |
+|----------------------------|---------------------------------------------------------------------------|
+| `docker-compose.yml`       | **Облачный** — для Timeweb App Platform. Только бэкенд-сервисы + gateway, инфраструктура (Postgres / RabbitMQ / Redis / S3) внешняя. |
+| `docker-compose.local.yml` | **Локальный** — полный стек с Postgres / RabbitMQ / Redis / MinIO в контейнерах и volumes для данных.|
+
+Для локальной разработки используй `docker-compose.local.yml` (флагом `-f`).
+
 ### 1. Клонирование репозитория
 
 ```bash
@@ -165,20 +175,10 @@ git clone https://github.com/your-org/resx.git
 cd resx
 ```
 
-### 2. (Опционально) `.env` для прод-значений
-
-В compose-файле уже прописаны dev-дефолты — для локалки правки `.env` не нужны. Если разворачиваешь на сервер, создай `.env` рядом с `docker-compose.yml`:
-
-```env
-S3_PUBLIC_URL=https://files.your-domain.com   # browser-доступный URL MinIO
-```
-
-Все секретные ключи (`Jwt__SecretKey`, пароли БД) — поменяй прямо в `docker-compose.yml` или вынеси в env-переменные перед прод-запуском.
-
-### 3. Запуск всех сервисов
+### 2. Запуск всех сервисов локально
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.local.yml up -d --build
 ```
 
 Первая сборка — 5–15 минут. Дальше слои кэшируются, рестарт одного сервиса — секунды.
@@ -186,8 +186,10 @@ docker compose up -d --build
 Точечная пересборка одного сервиса:
 
 ```bash
-docker compose up -d --build listings-service
+docker compose -f docker-compose.local.yml up -d --build listings-service
 ```
+
+> **Не запускай `docker compose up` без `-f`** — это поднимет облачную конфигурацию, у которой нет ни Postgres, ни Redis, ни MinIO. Все сервисы лягут на старте с ошибкой подключения.
 
 ### 4. Проверка
 
@@ -210,10 +212,84 @@ docker compose up -d --build listings-service
 ### 5. Остановка
 
 ```bash
-docker compose down
+docker compose -f docker-compose.local.yml down
 # Удалить также volumes (все данные будут удалены):
-docker compose down -v
+docker compose -f docker-compose.local.yml down -v
 ```
+
+---
+
+## Деплой на Timeweb Cloud App Platform
+
+App Platform Timeweb запрещает `volumes:`, хост-порты `80/443`, `network_mode: host` и ряд других директив. **Состояние хранить нельзя — БД, очереди, объектное хранилище должны быть внешними.** Поэтому корневой `docker-compose.yml` адаптирован: содержит только бэкенд-сервисы + gateway, а инфраструктура подключается по env-переменным.
+
+### Шаг 1. Поднять внешнюю инфраструктуру в Timeweb
+
+В панели Timeweb Cloud:
+
+1. **PostgreSQL (DBaaS)** — один кластер, 9 баз внутри. После создания подключись через psql или встроенный SQL-редактор и выполни:
+   ```sql
+   CREATE DATABASE resx_identity;
+   CREATE DATABASE resx_users;
+   CREATE DATABASE resx_listings;
+   CREATE DATABASE resx_transactions;
+   CREATE DATABASE resx_messaging;
+   CREATE DATABASE resx_notifications;
+   CREATE DATABASE resx_charity;
+   CREATE DATABASE resx_disputes;
+   CREATE DATABASE resx_files;
+   ```
+   Готовый список — в [scripts/init-databases.sql](scripts/init-databases.sql).
+2. **Redis (DBaaS)** — один экземпляр, подключение по TLS.
+3. **RabbitMQ** — managed-сервиса нет, поднимай на отдельном Cloud Server (VPS) или используй managed-RabbitMQ другого провайдера. Не забудь создать vhost `resx`.
+4. **Object Storage** — раздел «Объекты (S3)» → создай бакет `resx-files`. Из виджета внизу бакета забери: endpoint (`https://s3.twcstorage.ru`), Access Key, Secret Key, регион (`ru-1`).
+
+### Шаг 2. Заполнить env-переменные
+
+Скопируй [.env.example](.env.example) → `.env` локально (для проверок) и **обязательно** перенеси значения в **«Переменные окружения»** в настройках приложения на App Platform — оттуда оно подставит их при сборке. В Git **`.env` не коммитим** — он в `.gitignore`.
+
+Ключевые группы:
+
+| Группа    | Переменные                                                              |
+|-----------|-------------------------------------------------------------------------|
+| JWT       | `JWT_SECRET_KEY`, `JWT_ISSUER`, `JWT_AUDIENCE`                          |
+| CORS      | `FRONTEND_ORIGIN` (домен фронта, на который gateway разрешит запросы)   |
+| Postgres  | `<SERVICE>_DB_CONNECTION` × 9                                           |
+| Redis     | `REDIS_CONNECTION`                                                      |
+| RabbitMQ  | `RABBIT_HOST`, `RABBIT_PORT`, `RABBIT_VHOST`, `RABBIT_USER`, `RABBIT_PASSWORD` |
+| S3        | `S3_SERVICE_URL`, `S3_PUBLIC_URL`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET_NAME`, `S3_REGION` |
+
+### Шаг 3. Создать приложение в App Platform
+
+1. Панель Timeweb Cloud → **App Platform** → **«Создать приложение»**.
+2. Тип: **Docker → Docker Compose**.
+3. Подключи GitHub-репозиторий с этим проектом, выбери ветку.
+4. Регион и тариф подбирай по своей нагрузке.
+5. В разделе **«Переменные окружения»** вставь значения из `.env`.
+6. Запусти деплой. Платформа прочитает `docker-compose.yml`, соберёт все 11 образов (gateway + 10 микросервисов) и стартанёт их.
+
+### Шаг 4. Проверка после деплоя
+
+- Основной домен App Platform указывает на **`api-gateway`** (он первый в `services:`). Проверь:
+  ```
+  https://<your-app>.tw1.ru/health  → 200
+  https://<your-app>.tw1.ru/api/categories  → JSON-список категорий
+  ```
+- Мониторь логи каждого сервиса в панели — особенно подключения к Postgres / Redis / RabbitMQ на старте. Миграции FluentMigrator накатываются автоматически при первом запуске.
+- Swagger остальных микросервисов **не доступен снаружи** — ports у них убраны. Это намеренно. Доступ только через gateway. Для дебага временно добавь `ports: ["5001:8080"]` к нужному сервису.
+
+### Шаг 5. Привязка домена и фронта
+
+- В App Platform → твоё приложение → «Домены» — привяжи `api.your-domain.com`.
+- Во фронте установи `VITE_API_URL` (или аналог) на этот домен.
+- В env бэкенда переопредели `FRONTEND_ORIGIN=https://app.your-domain.com` — gateway разрешит CORS только с этого источника.
+
+### Ограничения, о которых нужно помнить
+
+- **Без volumes** — никаких локальных файлов: всё в Postgres / Object Storage. Не пытайся ставить `volumes:` в `docker-compose.yml` — деплой упадёт.
+- **Без host-портов 80/443** — у gateway внутренний `8080`, наружу его пробрасывает сам Timeweb на HTTPS.
+- **Без `network_mode: host`** — не нужен, межсервисные вызовы идут по имени контейнера в compose-сети.
+- **Поднять Postgres / Redis на паузу нельзя** — DBaaS Timeweb тарифицируется почасово, остановить кластер без удаления нельзя. Для длинных пауз: дамп через `pg_dump`, удаление кластера, при возобновлении — новый кластер + восстановление дампа.
 
 ---
 
@@ -659,8 +735,9 @@ ResX/
 │   └── ResX.Users.IntegrationTests/
 ├── scripts/
 │   └── init-databases.sql             # Создаёт все БД PostgreSQL при первом запуске
-├── docker-compose.yml                 # Полная оркестрация локального окружения
-├── docker-compose.override.yml        # Dev-переопределения (debug-логирование)
+├── docker-compose.yml                 # Cloud-ready compose для Timeweb App Platform
+├── docker-compose.local.yml           # Локальная разработка: gateway + 10 сервисов + Postgres/Redis/RabbitMQ/MinIO
+├── .env.example                       # Шаблон env-переменных для Timeweb-деплоя (копируй в .env)
 └── ResX.sln                           # Visual Studio solution
 ```
 
