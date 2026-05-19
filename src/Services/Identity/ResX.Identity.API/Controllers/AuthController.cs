@@ -137,7 +137,7 @@ public class AuthController : ControllerBase
         {
             HttpOnly = false,
             Secure = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.Lax,
             MaxAge = TimeSpan.FromMinutes(_tokenService.GetAccessTokenExpiryMinutes())
         });
 
@@ -145,7 +145,7 @@ public class AuthController : ControllerBase
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.Lax,
             MaxAge = TimeSpan.FromDays(30)
         });
     }
