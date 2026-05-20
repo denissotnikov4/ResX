@@ -19,11 +19,14 @@ public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ITokenService _tokenService;
+    private readonly string? _cookieDomain;
 
-    public AuthController(IMediator mediator, ITokenService tokenService)
+    public AuthController(IMediator mediator, ITokenService tokenService, IConfiguration configuration)
     {
         _mediator = mediator;
         _tokenService = tokenService;
+        var domain = configuration["Cookies:Domain"];
+        _cookieDomain = string.IsNullOrWhiteSpace(domain) ? null : domain;
     }
 
     /// <summary>
@@ -138,6 +141,7 @@ public class AuthController : ControllerBase
             HttpOnly = false,
             Secure = true,
             SameSite = SameSiteMode.Lax,
+            Domain = _cookieDomain,
             MaxAge = TimeSpan.FromMinutes(_tokenService.GetAccessTokenExpiryMinutes())
         });
 
@@ -146,13 +150,15 @@ public class AuthController : ControllerBase
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
+            Domain = _cookieDomain,
             MaxAge = TimeSpan.FromDays(30)
         });
     }
 
     private void ClearTokenCookies()
     {
-        Response.Cookies.Delete("accessToken");
-        Response.Cookies.Delete("refreshToken");
+        var deleteOptions = new CookieOptions { Domain = _cookieDomain };
+        Response.Cookies.Delete("accessToken", deleteOptions);
+        Response.Cookies.Delete("refreshToken", deleteOptions);
     }
 }

@@ -65,6 +65,7 @@ services:
       Jwt__Audience: "${JWT_AUDIENCE:-ResX}"
       Jwt__AccessTokenExpiryMinutes: "${JWT_ACCESS_EXPIRY_MIN:-60}"
       Jwt__RefreshTokenExpiryDays: "${JWT_REFRESH_EXPIRY_DAYS:-30}"
+      Cookies__Domain: "${COOKIE_DOMAIN}"
       EventBus__HostName: "${RABBIT_HOST}"
       EventBus__Port: "${RABBIT_PORT:-5672}"
       EventBus__VirtualHost: "${RABBIT_VHOST:-resx}"
