@@ -44,7 +44,7 @@ public class UploadFileCommandHandler : IRequestHandler<UploadFileCommand, FileR
 
         var url = await _storageService.GetPresignedUrlAsync(
             fileKey: storageKey,
-            expiry: TimeSpan.FromDays(365),
+            expiry: TimeSpan.FromDays(7),
             cancellationToken);
 
         var fileRecord = FileRecord.Create(

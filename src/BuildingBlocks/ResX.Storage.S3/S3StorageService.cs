@@ -8,6 +8,8 @@ namespace ResX.Storage.S3;
 
 public class S3StorageService : IStorageService
 {
+    private static readonly TimeSpan MaxPresignedExpiry = TimeSpan.FromDays(7);
+
     private readonly IAmazonS3 _s3Client;
     private readonly IAmazonS3 _presignClient;
     private readonly Uri? _publicUriOverride;
@@ -83,11 +85,21 @@ public class S3StorageService : IStorageService
         TimeSpan? expiry = null,
         CancellationToken cancellationToken = default)
     {
+        var requested = expiry ?? TimeSpan.FromHours(1);
+        var effective = requested;
+        if (requested > MaxPresignedExpiry)
+        {
+            _logger.LogWarning(
+                "Presigned URL expiry {Requested} exceeds AWS SigV4 limit; clamped to {Max}.",
+                requested, MaxPresignedExpiry);
+            effective = MaxPresignedExpiry;
+        }
+
         var request = new GetPreSignedUrlRequest
         {
             BucketName = _bucketName,
             Key = fileKey,
-            Expires = DateTime.UtcNow.Add(expiry ?? TimeSpan.FromHours(1)),
+            Expires = DateTime.UtcNow.Add(effective),
             Verb = HttpVerb.GET
         };
 
